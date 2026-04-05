@@ -241,9 +241,55 @@ table.wi tr:hover td{background:#fafaf8;}
 
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.three-col{grid-template-columns:1fr 1fr;}.fc-stats{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:800px){.kpi-grid{grid-template-columns:repeat(2,1fr);}.two-col,.three-col{grid-template-columns:1fr;}.main{padding:1rem;}.sprint-stats-grid{grid-template-columns:1fr 1fr;}.fc-stats{grid-template-columns:1fr 1fr;}}
+
+/* LOGIN */
+#login-screen{flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#062f2f 0%,#0D6E6E 60%,#1c9090 100%);padding:2rem;}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.login-logo{width:48px;height:48px;background:var(--teal);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;}
+.login-logo svg{width:26px;height:26px;fill:#fff;}
+.login-card h1{font-size:21px;font-weight:600;margin-bottom:5px;color:var(--text);}
+.login-card .sub{font-size:13px;color:var(--text-2);margin-bottom:1.75rem;}
+.field{margin-bottom:1rem;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+.field input{width:100%;padding:10px 13px;border:1.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--font);font-size:13px;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s;}
+.field input:focus{border-color:var(--teal);}
+.field input.mono{font-family:var(--mono);font-size:11px;letter-spacing:.04em;}
+.login-btn{width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:var(--r-sm);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.25rem;}
+.login-btn:hover{background:var(--teal-dark);}
+.login-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-btn.loading .login-spinner{display:block;}
+.login-btn.loading .login-btn-text{opacity:.7;}
+.login-error{margin-top:.75rem;padding:10px 13px;background:var(--red-light);border-radius:var(--r-sm);font-size:12px;color:var(--red);display:none;line-height:1.6;}
+.login-note{margin-top:1rem;font-size:11px;color:var(--text-3);text-align:center;line-height:1.6;}
 </style>
 </head>
 <body>
+
+<!-- SCREEN 0: LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    </div>
+    <h1>PMO Command Center</h1>
+    <p class="sub">Sign in with your Azure DevOps credentials to continue.</p>
+    <div class="field">
+      <label>Organisation URL</label>
+      <input type="text" id="inp-org" placeholder="https://dev.azure.com/your-org" value="https://dev.azure.com/verokeinc">
+    </div>
+    <div class="field">
+      <label>Personal Access Token (PAT)</label>
+      <input type="password" id="inp-pat" class="mono" placeholder="Paste your PAT here">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
+      <div class="login-spinner"></div>
+      <span class="login-btn-text">Connect &amp; Load Projects &#8594;</span>
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <p class="login-note">Your PAT stays in your browser and is never stored or sent anywhere except directly to Azure DevOps.</p>
+  </div>
+</div>
 
 <!-- SCREEN 1: PROJECT PICKER -->
 <div id="picker-screen" class="screen active">
@@ -272,6 +318,7 @@ table.wi tr:hover td{background:#fafaf8;}
     <div class="status-chip"><span class="sdot loading" id="sdot"></span><span id="stext">Loading...</span></div>
     <button class="tb-btn" onclick="refreshDashboard()">&#8635; Refresh</button>
     <button class="tb-btn" onclick="goToPicker()">&#8859; Change Project</button>
+    <button class="tb-btn" onclick="doLogout()">Sign out</button>
   </div>
 
   <div class="main">
@@ -409,11 +456,7 @@ table.wi tr:hover td{background:#fafaf8;}
 </div>
 
 <script>
-const CONFIG={
-  org:'https://dev.azure.com/verokeinc',
-  pat:'7aZ5bleyMXJHq7bVzwoBe56VNwuh91qrbNdmDnzuM5nOSaOrQ41gJQQJ99CDACAAAAAJBmJNAAASAZDOPAy7'
-};
-let ORG=CONFIG.org,AUTH='Basic '+btoa(':'+CONFIG.pat);
+let ORG='',AUTH='';
 let allWI=[],allIterations=[],currentProject='',allProjects=[],selectedSprintIdx=null;
 const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];
 
@@ -1109,6 +1152,34 @@ function renderSummary(){
       <div class="advice-num">${i+1}</div>
       <div class="advice-text">${a.text}<span class="advice-impact ${a.impact}">${a.impact==='high'?'High impact':a.impact==='med'?'Medium impact':a.impact==='proc'?'Process fix':'Keep up'}</span></div>
     </div>`).join('');
+}
+
+async function doLogin(){
+  const orgRaw=document.getElementById('inp-org').value.trim().replace(/\/$/,'');
+  const pat=document.getElementById('inp-pat').value.trim();
+  const errEl=document.getElementById('login-error');
+  errEl.style.display='none';
+  if(!orgRaw||!pat){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and PAT.';return;}
+  const btn=document.getElementById('login-btn');
+  btn.classList.add('loading');btn.disabled=true;
+  ORG=orgRaw;AUTH='Basic '+btoa(':'+pat);
+  try{
+    const data=await adoFetch(ORG+'/_apis/projects?api-version=7.1&$top=100');
+    allProjects=data.value||[];
+    if(!allProjects.length)throw new Error('No projects found in this organisation.');
+    document.getElementById('picker-org-label').textContent='· '+ORG.replace('https://dev.azure.com/','');
+    document.getElementById('topbar-org').textContent=ORG.replace('https://dev.azure.com/','');
+    renderProjectGrid(allProjects);
+    showScreen('picker-screen');
+  }catch(e){
+    errEl.style.display='block';
+    errEl.innerHTML='Connection failed: '+e.message+'<br><small>Check your org URL and PAT scopes (Work Items: Read, Project: Read).</small>';
+    btn.classList.remove('loading');btn.disabled=false;
+  }
+}
+
+async function init(){
+  // No auto-init — wait for user to log in
 }
 
 init();

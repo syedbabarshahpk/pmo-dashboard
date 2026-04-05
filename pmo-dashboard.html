@@ -262,6 +262,42 @@ table.wi tr:hover td{background:#fafaf8;}
 .login-btn.loading .login-btn-text{opacity:.7;}
 .login-error{margin-top:.75rem;padding:10px 13px;background:var(--red-light);border-radius:var(--r-sm);font-size:12px;color:var(--red);display:none;line-height:1.6;}
 .login-note{margin-top:1rem;font-size:11px;color:var(--text-3);text-align:center;line-height:1.6;}
+
+/* TYPE BREAKDOWN IN FORECAST */
+.type-breakdown-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin:10px 0 14px;}
+.type-breakdown-cell{background:rgba(255,255,255,.65);border-radius:7px;padding:8px 10px;text-align:center;}
+.tbc-val{font-size:18px;font-weight:600;color:var(--text);line-height:1;}
+.tbc-done{font-size:10px;color:var(--text-3);margin-top:1px;}
+.tbc-label{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:5px;}
+
+/* SECTION TYPE LEGEND */
+.type-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.type-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-2);}
+.type-legend-dot{width:8px;height:8px;border-radius:3px;flex-shrink:0;}
+
+/* SCORE INFO BUTTON & MODAL */
+.score-info-btn{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.5);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;transition:all .2s;font-family:var(--font);vertical-align:middle;}
+.score-info-btn:hover{border-color:#fff;color:#fff;background:rgba(255,255,255,.1);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:2rem;}
+.modal-overlay.open{display:flex;}
+.modal-card{background:var(--surface);border-radius:16px;padding:0;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:0.5px solid var(--border);}
+.modal-title{font-size:15px;font-weight:600;color:var(--text);}
+.modal-close{width:28px;height:28px;border-radius:8px;border:none;background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-2);}
+.modal-close:hover{background:var(--border);}
+.modal-body{padding:18px 20px;}
+.score-metric-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);}
+.score-metric-row:last-child{border-bottom:none;}
+.score-metric-points{min-width:44px;text-align:center;}
+.score-metric-pts-val{font-size:16px;font-weight:600;color:var(--text);}
+.score-metric-pts-label{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;}
+.score-metric-body{}
+.score-metric-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.score-metric-desc{font-size:11px;color:var(--text-2);line-height:1.5;}
+.score-total-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0 0;margin-top:4px;}
+.score-total-label{font-size:12px;font-weight:500;color:var(--text);}
+.score-ranges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.score-range-pill{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;}
 </style>
 </head>
 <body>
@@ -371,10 +407,12 @@ table.wi tr:hover td{background:#fafaf8;}
     <div class="two-col">
       <div class="panel">
         <div class="ptitle">Delayed items <span class="ptitle-sub" id="delayed-count"></span></div>
+        <div id="delayed-type-legend" class="type-legend"></div>
         <div id="delayed-list"><div class="empty">Loading...</div></div>
       </div>
       <div class="panel">
         <div class="ptitle">Stale 7+ days <span class="ptitle-sub">no activity</span></div>
+        <div id="stale-type-legend" class="type-legend"></div>
         <div id="stale-list"><div class="empty">Loading...</div></div>
       </div>
     </div>
@@ -384,6 +422,7 @@ table.wi tr:hover td{background:#fafaf8;}
     <div class="two-col">
       <div class="panel">
         <div class="ptitle">Low quality stories <span class="ptitle-sub">missing criteria / scope changes</span></div>
+        <div id="quality-type-legend" class="type-legend"></div>
         <div id="quality-list"><div class="empty">Loading...</div></div>
       </div>
       <div class="panel">
@@ -442,7 +481,7 @@ table.wi tr:hover td{background:#fafaf8;}
           <div class="sum-desc" id="sum-desc"></div>
         </div>
         <div class="sum-score-area">
-          <div class="sum-score" id="sum-score">-</div>
+          <div style="display:flex;align-items:baseline;gap:6px;justify-content:flex-end"><div class="sum-score" id="sum-score">-</div><button class="score-info-btn" onclick="document.getElementById('score-modal').classList.add('open')" title="How is this score calculated?">i</button></div>
           <div class="sum-score-label" id="sum-score-label">Health score</div>
         </div>
       </div>
@@ -769,8 +808,48 @@ function renderSprintDetail(){
     <div class="sprint-progress-label">${pct}% complete · ${items.length-doneItems.length} items remaining${daysLeft>0?' · '+daysLeft+' days left':''}</div>
   </div>`;
 
+  // Add type breakdown below the sprint detail box
+  const typeBreakdown = buildTypeBreakdown(items);
+  document.getElementById('sprint-detail-area').innerHTML += typeBreakdown;
+
   document.getElementById('forecast-sprint-label').textContent='— '+it.name;
   renderForecast();
+}
+
+
+
+function buildTypeLegend(items){
+  if(!items||!items.length)return'';
+  const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Test Case':'#3B6D11','Issue':'#993C1D','Other':'#888780'};
+  const counts={};
+  items.forEach(w=>{const t=w.fields['System.WorkItemType']||'Other';counts[t]=(counts[t]||0)+1;});
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([t,c])=>{
+    const col=TYPE_COLORS[t]||'#888';
+    return `<div class="type-legend-item"><div class="type-legend-dot" style="background:${col}"></div><span>${t}: ${c}</span></div>`;
+  }).join('');
+}
+
+function buildTypeBreakdown(items){
+  if(!items||!items.length)return'';
+  const types={};
+  items.forEach(w=>{
+    const t=w.fields['System.WorkItemType']||'Other';
+    if(!types[t])types[t]={total:0,done:0};
+    types[t].total++;
+    if(isDone(w.fields))types[t].done++;
+  });
+  const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Test Case':'#3B6D11','Issue':'#993C1D','Other':'#888780'};
+  const entries=Object.entries(types).sort((a,b)=>b[1].total-a[1].total);
+  const cells=entries.map(([t,v])=>{
+    const col=TYPE_COLORS[t]||'#888';
+    const pct=Math.round(v.done/v.total*100);
+    return `<div class="type-breakdown-cell">
+      <div class="tbc-val">${v.total}</div>
+      <div class="tbc-done">${v.done} done · ${pct}%</div>
+      <div class="tbc-label"><span style="width:8px;height:8px;border-radius:3px;background:${col};display:inline-block"></span><span class="tp" style="background:${col}18;color:${col};font-size:9px;font-weight:600;padding:1px 5px;border-radius:10px">${t}</span></div>
+    </div>`;
+  }).join('');
+  return `<div style="margin-top:10px"><div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Items by type</div><div class="type-breakdown-grid">${cells}</div></div>`;
 }
 
 // ── FORECAST ──
@@ -888,6 +967,7 @@ function renderForecast(){
       <div class="fc-stat"><div class="fc-stat-l">Days left</div><div class="fc-stat-v" style="color:${daysLeft<=2?'var(--red)':'var(--text)'}">${daysLeft}</div><div class="fc-stat-s">of ${daysTotal} total</div></div>
       <div class="fc-stat"><div class="fc-stat-l">Forecast</div><div class="fc-stat-v" style="color:${fcClass==='green'?'var(--green)':fcClass==='amber'?'var(--amber)':'var(--red)'}">${forecastPct}%</div><div class="fc-stat-s">delivery chance</div></div>
     </div>
+    <div style="margin-bottom:12px">${buildTypeBreakdown(items)}</div>
     <div class="fc-issues">${issues.map(i=>`
       <div class="fc-issue">
         <div class="fc-dot ${i.dot}"></div>
@@ -901,8 +981,12 @@ function renderForecast(){
 // ── DELAYED & STALE ──
 function renderDelayedStale(){
   const delayed=getDelayedItems().slice(0,8);
-  const stale=getStaleItems().slice(0,8);
-  document.getElementById('delayed-count').textContent=getDelayedItems().length+' total';
+  const stale=getStaleItems();
+  const staleSliced=stale.slice(0,8);
+  const allDelayed=getDelayedItems();
+  document.getElementById('delayed-count').textContent=allDelayed.length+' total';
+  document.getElementById('delayed-type-legend').innerHTML=buildTypeLegend(allDelayed);
+  document.getElementById('stale-type-legend').innerHTML=buildTypeLegend(stale);
   document.getElementById('delayed-list').innerHTML=delayed.length?delayed.map(w=>{
     const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
     const daysLate=iter?.attributes?.finishDate?daysSince(iter.attributes.finishDate):0;
@@ -910,11 +994,12 @@ function renderDelayedStale(){
     return `<div class="row"><span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span><span class="badge ${daysLate>5?'red':'amber'}">${daysLate}d late</span><span class="wi-person">${esc(person)}</span></div>`;
   }).join(''):'<div class="empty" style="padding:1rem">No delayed items</div>';
 
-  document.getElementById('stale-list').innerHTML=stale.length?stale.map(w=>{
+  document.getElementById('stale-list').innerHTML=staleSliced.length?staleSliced.map(w=>{
     const days=daysSince(w.fields['System.ChangedDate']);
     const person=getAssigneeName(w.fields)||'Unassigned';
     return `<div class="row"><span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span><span class="badge ${days>10?'red':'amber'}">${days}d</span><span class="wi-person">${esc(person)}</span></div>`;
-  }).join(''):'<div class="empty" style="padding:1rem">No stale items</div>';
+  }).join('')+'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">'+( stale.length>8?'+'+(stale.length-8)+' more':'')+'</div>'
+    :'<div class="empty" style="padding:1rem">No stale items</div>';
 }
 
 // ── QUALITY ──
@@ -929,6 +1014,7 @@ function renderQualityClarity(){
   }).slice(0,6);
 
   const qEl=document.getElementById('quality-list');
+  document.getElementById('quality-type-legend').innerHTML=buildTypeLegend(stories);
   qEl.innerHTML=lowQuality.length?lowQuality.map(w=>{
     const f=w.fields;
     const tags=[];
@@ -1184,5 +1270,55 @@ async function init(){
 
 init();
 </script>
+
+<!-- SCORE INFO MODAL -->
+<div class="modal-overlay" id="score-modal" onclick="closeScoreModal(event)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-title">How the health score is calculated</span>
+      <button class="modal-close" onclick="document.getElementById('score-modal').classList.remove('open')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:14px;line-height:1.6;">The health score starts at <strong style="font-weight:600">100</strong> and deductions are applied based on the following metrics. The final score reflects the overall delivery health of the project.</div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--red)">-2</div><div class="score-metric-pts-label">per item</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">Delayed items (max -20 pts)</div><div class="score-metric-desc">Work items that are past their sprint end date and not yet resolved. Each delayed item signals a missed commitment and carries over debt into future sprints.</div></div>
+      </div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--red)">-2</div><div class="score-metric-pts-label">per item</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">Stale items (max -15 pts)</div><div class="score-metric-desc">Active items with no update for 7+ days. Stale items indicate blocked work, forgotten tasks, or a team not keeping ADO current — all of which reduce forecast accuracy.</div></div>
+      </div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--amber)">-1</div><div class="score-metric-pts-label">per item</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">Unassigned items (max -10 pts)</div><div class="score-metric-desc">Active items with no owner. Unowned items have no accountability and statistically never get done on time.</div></div>
+      </div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--red)">-20</div><div class="score-metric-pts-label">pts</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">User story quality below 50%</div><div class="score-metric-desc">If fewer than 50% of user stories have acceptance criteria, a 20-point deduction is applied. Without acceptance criteria, developers cannot objectively determine when a story is done, causing rework.</div></div>
+      </div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--amber)">-10</div><div class="score-metric-pts-label">pts</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">User story quality 50–74%</div><div class="score-metric-desc">If 50–74% of stories have acceptance criteria, a 10-point deduction applies. Partial quality still signals process gaps.</div></div>
+      </div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--red)">-15</div><div class="score-metric-pts-label">pts</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">ADO update rate below 50%</div><div class="score-metric-desc">If fewer than 50% of active items were updated in the last 7 days, a 15-point deduction applies. ADO must reflect reality daily — Furqan cannot manage what isn't tracked.</div></div>
+      </div>
+      <div class="score-metric-row">
+        <div class="score-metric-points"><div class="score-metric-pts-val" style="color:var(--amber)">-8</div><div class="score-metric-pts-label">pts</div></div>
+        <div class="score-metric-body"><div class="score-metric-name">ADO update rate 50–70%</div><div class="score-metric-desc">An 8-point deduction for moderate update compliance. Target is 90%+ of active items updated weekly.</div></div>
+      </div>
+      <div style="border-top:0.5px solid var(--border);padding-top:14px;margin-top:4px;">
+        <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px;">Score interpretation</div>
+        <div class="score-ranges">
+          <div class="score-range-pill" style="background:var(--green-light);color:var(--green)">70–100 · Good</div>
+          <div class="score-range-pill" style="background:var(--amber-light);color:var(--amber)">50–69 · Needs attention</div>
+          <div class="score-range-pill" style="background:var(--red-light);color:var(--red)">0–49 · Critical</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

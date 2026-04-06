@@ -1546,7 +1546,7 @@ function renderDeliveryPlans(project, plans){
   let extraChips='';
   plans.slice(1).forEach(p=>{
     const url=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+p.id;
-    extraChips+='<div class="dp-plan-chip" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+url+'">';'
+    extraChips+='<div class="dp-plan-chip" onclick="window.open(this.dataset.url,\\'_blank\\')" data-url="'+url+'">';'
       +'<span class="dp-plan-chip-name">'+esc(p.name)+'</span>'
       +'<span class="dp-plan-chip-icon">&#8599;</span>'
       +'</div>';

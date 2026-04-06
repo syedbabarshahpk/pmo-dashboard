@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -683,7 +681,6 @@ async function doLogin(){
   if(!orgRaw||!patRaw){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and PAT.';return;}
   const pats=patRaw.split(',').map(p=>p.trim()).filter(Boolean);
   isFurqanMode = pats.length > 1;
-  isFurqanMode=pats.length>1;
   const btn=$('login-btn');
   btn.classList.add('loading');btn.disabled=true;
   $('login-btn-text').textContent='Connecting...';

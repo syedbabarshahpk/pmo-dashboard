@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PMO Command Center</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -389,7 +392,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     </div>
     <div class="field">
       <label>Personal Access Token(s)</label>
-      <textarea id="inp-pat" rows="3" placeholder="Paste your PAT here — multiple PATs separated by commas"></textarea>
+      <textarea id="inp-pat" rows="3" placeholder=""></textarea>
     </div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">
       <div class="spin"></div>
@@ -397,7 +400,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     </button>
     <div class="login-err" id="login-err"></div>
     <div class="login-status" id="login-status"></div>
-    <p class="login-note">1 PAT = your projects only &nbsp;·&nbsp; 2+ PATs separated by commas = full portfolio view across all projects.</p>
+    <p class="login-note">PATs are used only in your browser and never stored anywhere.</p>
   </div>
 </div>
 
@@ -604,8 +607,6 @@ let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='ta
 let qualityTabFilter='all', clarityTabFilter='all';
 let isFurqanMode=false;
 
-
-// ══ NOTION VAULT CONFIG ══
 
 
 const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];

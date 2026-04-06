@@ -346,6 +346,33 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 .qc-sug-label{font-size:10px;font-weight:600;color:#0F6E56;text-transform:uppercase;letter-spacing:.06em;flex:1;}
 .qc-sug-copy-badge{font-size:9px;font-weight:500;padding:1px 7px;border-radius:20px;background:rgba(15,110,86,.15);color:#0F6E56;}
 .qc-sug-text{font-size:12px;color:#085041;line-height:1.55;}
+
+/* MASTER DASHBOARD */
+.master-proj-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+.master-proj-card:hover{border-color:var(--teal);box-shadow:var(--shadow);}
+.mpc-top{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid var(--border);}
+.mpc-av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.mpc-name{font-size:13px;font-weight:600;color:var(--text);}
+.mpc-sub{font-size:10px;color:var(--text-3);margin-top:2px;}
+.mpc-body{padding:14px 16px;}
+.mpc-mini-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.mpc-mk{background:var(--bg);border-radius:6px;padding:7px 8px;}
+.mpc-mk-l{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.mpc-mk-v{font-size:16px;font-weight:600;color:var(--text);}
+.mpc-spr-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.mpc-spr-label{font-size:10px;color:var(--text-2);width:54px;flex-shrink:0;}
+.mpc-spr-bar{flex:1;height:7px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.mpc-spr-fill{height:100%;border-radius:4px;}
+.mpc-spr-pct{font-size:10px;font-weight:600;min-width:28px;text-align:right;}
+.mpc-alerts{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.mpc-alert{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--text);line-height:1.4;}
+.mpc-alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.mpc-view-btn{width:100%;padding:7px;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--font);font-size:11px;color:var(--text-2);cursor:pointer;transition:all .15s;}
+.mpc-view-btn:hover{border-color:var(--teal);color:var(--teal);}
+.leader-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,.05);}
+.leader-row:last-child{border-bottom:none;}
+.score-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.score-bar-row:last-child{margin-bottom:0;}
 </style>
 </head>
 <body>
@@ -355,28 +382,22 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
   <div class="login-card">
     <div class="login-logo"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></div>
     <h1>PMO Command Center</h1>
-    <p class="login-sub" id="login-sub-text">Loading credentials from vault...</p>
-    <div id="login-loading" style="text-align:center;padding:1.5rem 0">
-      <div class="spin" style="display:inline-block;width:24px;height:24px;border-width:3px;border-color:rgba(13,110,110,.2);border-top-color:var(--teal)"></div>
-      <div style="font-size:12px;color:var(--text-3);margin-top:10px">Fetching PATs from Notion vault...</div>
+    <p class="login-sub">Sign in with your Azure DevOps credentials.</p>
+    <div class="field">
+      <label>Organisation URL</label>
+      <input type="text" id="inp-org" placeholder="https://dev.azure.com/your-org" value="https://dev.azure.com/verokeinc">
     </div>
-    <div id="login-manual" style="display:none">
-      <div class="field">
-        <label>Organisation URL</label>
-        <input type="text" id="inp-org" placeholder="https://dev.azure.com/your-org" value="https://dev.azure.com/verokeinc">
-      </div>
-      <div class="field">
-        <label>Personal Access Token(s)</label>
-        <textarea id="inp-pat" rows="3" placeholder="Paste your PAT here"></textarea>
-      </div>
+    <div class="field">
+      <label>Personal Access Token(s)</label>
+      <textarea id="inp-pat" rows="3" placeholder="Paste your PAT here — multiple PATs separated by commas"></textarea>
     </div>
-    <button class="login-btn" id="login-btn" onclick="doLogin()" style="display:none">
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
       <div class="spin"></div>
       <span id="login-btn-text">Connect &amp; Load Projects &#8594;</span>
     </button>
     <div class="login-err" id="login-err"></div>
     <div class="login-status" id="login-status"></div>
-    <p class="login-note" id="login-note" style="display:none">PATs are loaded from your Notion vault. They never leave your browser.</p>
+    <p class="login-note">1 PAT = your projects only &nbsp;·&nbsp; 2+ PATs separated by commas = full portfolio view across all projects.</p>
   </div>
 </div>
 
@@ -407,6 +428,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     <div class="topbar-space"></div>
     <div class="status-chip"><span class="sdot loading" id="sdot"></span><span id="stext">Loading...</span></div>
     <button class="tb-btn" onclick="loadDashboard(currentProject)">&#8635; Refresh</button>
+    <button class="tb-btn" id="back-to-master-btn" onclick="showScreen('master-screen')" style="display:none">&#8678; Overview</button>
     <button class="tb-btn" onclick="goToPicker()">&#8859; Projects</button>
     <button class="tb-btn" onclick="doLogout()">Sign out</button>
   </div>
@@ -580,12 +602,12 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 let ORG='', AUTH='', currentProject='', allProjects=[], allWI=[], allIterations=[];
 let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='table', currentWI=[];
 let qualityTabFilter='all', clarityTabFilter='all';
-const NOTION_PAGE_ID='33a45005-1758-819e-8f8e-cbbbf1fb7805';
-const NOTION_TOKEN='NOTION_INTEGRATION_TOKEN_HERE';
+let isFurqanMode=false;
+
 
 // ══ NOTION VAULT CONFIG ══
-const NOTION_PAGE_ID='33a45005-1758-819e-8f8e-cbbbf1fb7805';
-const NOTION_TOKEN='NOTION_INTEGRATION_TOKEN_HERE';
+
+
 const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];
 const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Other':'#888780'};
 
@@ -622,23 +644,22 @@ async function adoFetch(url,opts={}){
 
 // ══ LOGIN ══
 async 
-function showManualLogin(msg){
-  $('login-loading').style.display='none';
-  $('login-manual').style.display='block';
-  $('login-btn').style.display='flex';
-  $('login-note').style.display='block';
-  $('login-sub-text').textContent='Sign in with your Azure DevOps credentials.';
-  if(msg){$('login-err').style.display='block';$('login-err').textContent=msg;}
-}
 
-async function connectWithPATs(orgRaw, patRaw){
+
+
+async function doLogin(){
+  const orgRaw=$('inp-org').value.trim().replace(/\/$/,'');
+  const patRaw=$('inp-pat').value.trim();
   const errEl=$('login-err');
   errEl.style.display='none';
+  $('login-status').style.display='none';
+  if(!orgRaw||!patRaw){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and PAT.';return;}
   const pats=patRaw.split(',').map(p=>p.trim()).filter(Boolean);
+  isFurqanMode=pats.length>1;
   const btn=$('login-btn');
   btn.classList.add('loading');btn.disabled=true;
   $('login-btn-text').textContent='Connecting...';
-  ORG=orgRaw; projectAuthMap={};
+  ORG=orgRaw;projectAuthMap={};
   try{
     const results=await Promise.allSettled(pats.map(async(pat,idx)=>{
       const auth='Basic '+btoa(':'+pat);
@@ -647,7 +668,7 @@ async function connectWithPATs(orgRaw, patRaw){
       const j=await r.json();
       return{auth,projects:j.value||[]};
     }));
-    const seen=new Set(); allProjects=[];
+    const seen=new Set();allProjects=[];
     const lines=[];
     results.forEach((r,idx)=>{
       if(r.status==='fulfilled'){
@@ -659,103 +680,20 @@ async function connectWithPATs(orgRaw, patRaw){
       }
     });
     if(!allProjects.length)throw new Error('No projects found. Check PAT scopes (Project: Read required).');
-    const statusEl=$('login-status');
-    statusEl.style.display='block';
-    statusEl.innerHTML=lines.join(' &nbsp;·&nbsp; ');
-    $('picker-org').textContent='· '+ORG.replace('https://dev.azure.com/','');
+    $('login-status').style.display='block';
+    $('login-status').innerHTML=lines.join(' &nbsp;·&nbsp; ');
     $('topbar-org').textContent=ORG.replace('https://dev.azure.com/','');
-    const patCount=new Set(Object.values(projectAuthMap)).size;
-    $('picker-sub').textContent=allProjects.length+' project'+(allProjects.length!==1?'s':'')+' loaded'+(patCount>1?' across '+patCount+' PATs':'')+'. Click one to open its dashboard.';
-    renderProjectGrid(allProjects);
-    setTimeout(()=>showScreen('picker-screen'),600);
-  }catch(e){
-    showManualLogin('Connection failed: '+e.message);
-    btn.classList.remove('loading');btn.disabled=false;
-    $('login-btn-text').textContent='Connect & Load Projects →';
-  }
-}
 
-async function loadFromNotionVault(){
-  try{
-    const r=await fetch('https://api.notion.com/v1/blocks/'+NOTION_PAGE_ID+'/children?page_size=100',{
-      headers:{'Authorization':'Bearer '+NOTION_TOKEN,'Notion-Version':'2022-06-28','Content-Type':'application/json'}
-    });
-    if(!r.ok)throw new Error('Notion API '+r.status);
-    const data=await r.json();
-    let jsonStr=null;
-    for(const block of(data.results||[])){
-      if(block.type==='code'){
-        const text=(block.code?.rich_text||[]).map(t=>t.plain_text).join('');
-        if(text.includes('"pats"')&&text.includes('"org"')){jsonStr=text;break;}
-      }
+    if(isFurqanMode){
+      // Multi-PAT = Furqan — go straight to Master Dashboard
+      setTimeout(()=>loadMasterDashboard(),600);
+    } else {
+      // Single PAT = PM — go to project picker
+      $('picker-org').textContent='· '+ORG.replace('https://dev.azure.com/','');
+      $('picker-sub').textContent=allProjects.length+' project'+(allProjects.length!==1?'s':'')+' loaded. Click one to open its dashboard.';
+      renderProjectGrid(allProjects);
+      setTimeout(()=>showScreen('picker-screen'),600);
     }
-    if(!jsonStr)throw new Error('No PAT config JSON found in Notion page.');
-    const config=JSON.parse(jsonStr);
-    const patString=config.pats.map(p=>p.token).filter(t=>t&&t!=='PASTE_PAT_HERE').join(',');
-    if(!patString)throw new Error('Vault found but PATs are not filled in yet.');
-    $('login-sub-text').textContent='Vault loaded — connecting to Azure DevOps...';
-    $('inp-org').value=config.org||'https://dev.azure.com/verokeinc';
-    $('inp-pat').value=patString;
-    await connectWithPATs(config.org||'https://dev.azure.com/verokeinc', patString);
-  }catch(e){
-    showManualLogin(
-      NOTION_TOKEN==='NOTION_INTEGRATION_TOKEN_HERE'?null:
-      'Vault unavailable: '+e.message+'. Enter PATs manually.'
-    );
-  }
-}
-
-function doLogin(){
-  const orgRaw=$('inp-org').value.trim().replace(/\/$/,'');
-  const patRaw=$('inp-pat').value.trim();
-  const errEl=$('login-err');
-  const statusEl=$('login-status');
-  errEl.style.display='none';
-  statusEl.style.display='none';
-  if(!orgRaw||!patRaw){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and PAT.';return;}
-
-  const pats=patRaw.split(',').map(p=>p.trim()).filter(Boolean);
-  const btn=$('login-btn');
-  btn.classList.add('loading');btn.disabled=true;
-  $('login-btn-text').textContent='Connecting...';
-  ORG=orgRaw;
-  projectAuthMap={};
-
-  try{
-    const results=await Promise.allSettled(pats.map(async(pat,idx)=>{
-      const auth='Basic '+btoa(':'+pat);
-      const r=await fetch(ORG+'/_apis/projects?api-version=7.1&$top=100',{headers:{Authorization:auth,'Content-Type':'application/json'}});
-      if(!r.ok)throw new Error('PAT '+(idx+1)+' invalid (HTTP '+r.status+')');
-      const j=await r.json();
-      return{auth,projects:j.value||[]};
-    }));
-
-    const seen=new Set();
-    allProjects=[];
-    const lines=[];
-    results.forEach((r,idx)=>{
-      if(r.status==='fulfilled'){
-        const{auth,projects}=r.value;
-        let added=0;
-        projects.forEach(p=>{if(!seen.has(p.id)){seen.add(p.id);allProjects.push(p);projectAuthMap[p.id]=auth;added++;}});
-        lines.push('<span style="color:var(--green)">&#10003; PAT '+(idx+1)+': '+projects.length+' projects</span>');
-        AUTH=auth;
-      }else{
-        lines.push('<span style="color:var(--red)">&#10007; PAT '+(idx+1)+': '+r.reason.message+'</span>');
-      }
-    });
-
-    if(!allProjects.length)throw new Error('No projects found. Check your PAT scopes (Project: Read required).');
-
-    statusEl.style.display='block';
-    statusEl.innerHTML=lines.join(' &nbsp;·&nbsp; ');
-
-    $('picker-org').textContent='· '+ORG.replace('https://dev.azure.com/','');
-    $('topbar-org').textContent=ORG.replace('https://dev.azure.com/','');
-    const patCount=new Set(Object.values(projectAuthMap)).size;
-    $('picker-sub').textContent=allProjects.length+' project'+(allProjects.length!==1?'s':'')+' loaded'+(patCount>1?' across '+patCount+' PATs':'')+'. Click one to open its dashboard.';
-    renderProjectGrid(allProjects);
-    setTimeout(()=>showScreen('picker-screen'),800);
   }catch(e){
     errEl.style.display='block';
     errEl.innerHTML='Connection failed: '+e.message+'<br><small>Check your org URL and PAT scopes.</small>';
@@ -764,16 +702,7 @@ function doLogin(){
   }
 }
 
-function doLogout(){
-  ORG='';AUTH='';allWI=[];allIterations=[];currentProject='';allProjects=[];selectedSprintIdx=null;projectAuthMap={};
-  $('inp-pat').value='';
-  $('login-err').style.display='none';
-  $('login-status').style.display='none';
-  $('login-btn').classList.remove('loading');
-  $('login-btn').disabled=false;
-  $('login-btn-text').textContent='Connect & Load Projects →';
-  showScreen('login-screen');
-}
+// doLogout defined below
 
 // ══ PROJECT PICKER ══
 function renderProjectGrid(projects){
@@ -805,6 +734,8 @@ function selectProject(name,idx){
   $('chip-name').textContent=name;
   $('ph-name').textContent=name;
   $('ph-sub').textContent='Azure DevOps · '+ORG.replace('https://dev.azure.com/','');
+  // Show "Back to overview" button only in Furqan mode
+  if($('back-to-master-btn'))$('back-to-master-btn').style.display=isFurqanMode?'':'none';
   showScreen('dashboard-screen');
   loadDashboard(name);
 }
@@ -1494,14 +1425,251 @@ function renderSummary(){
 }
 
 // ══ SCORE MODAL ══
-async function init(){
-  if(NOTION_TOKEN&&NOTION_TOKEN!=='NOTION_INTEGRATION_TOKEN_HERE'){
-    await loadFromNotionVault();
-  } else {
-    showManualLogin(null);
-  }
+function init(){}
+
+
+// ══ MASTER DASHBOARD ══
+let masterData={}; // projectId -> {allWI, allIterations}
+
+async function loadMasterDashboard(){
+  showScreen('master-screen');
+  $('master-org').textContent=ORG.replace('https://dev.azure.com/','');
+  $('master-sdot').className='sdot loading';
+  $('master-stext').textContent='Loading all projects...';
+
+  // Load all projects in parallel
+  const loadResults=await Promise.allSettled(allProjects.map(async p=>{
+    const proj=p;
+    const pAuth=projectAuthMap[proj.id]||AUTH;
+    // Temporarily set AUTH for fetch
+    const savedAuth=AUTH;AUTH=pAuth;
+    const[iters,wis]=await Promise.all([loadIterations(proj.name),loadWorkItems(proj.name)]);
+    AUTH=savedAuth;
+    return{proj,iters,wis};
+  }));
+
+  masterData={};
+  loadResults.forEach(r=>{
+    if(r.status==='fulfilled'){
+      const{proj,iters,wis}=r.value;
+      masterData[proj.id]={proj,allWI:wis,allIterations:iters};
+    }
+  });
+
+  $('master-sdot').className='sdot';
+  $('master-stext').textContent='Live · '+allProjects.length+' projects';
+  renderMasterDashboard();
 }
-init();
+
+function getMasterStats(d){
+  const{allWI,allIterations}=d;
+  const now=new Date();
+  const delayed=allWI.filter(w=>{
+    if(isDone(w.fields))return false;
+    const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
+    if(!iter?.attributes?.finishDate)return false;
+    return new Date(iter.attributes.finishDate)<now;
+  });
+  const stale=allWI.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=7);
+  const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
+  const done=allWI.filter(w=>isDone(w.fields));
+  const total=allWI.length||1;
+  const pct=Math.round(done.length/total*100);
+  const stories=allWI.filter(w=>isStory(w.fields));
+  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10);
+  const acPct=stories.length>0?Math.round(withAC.length/stories.length*100):100;
+  const active=allWI.filter(w=>isActive(w.fields));
+  const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7);
+  const updateRate=active.length>0?Math.round(updW.length/active.length*100):100;
+
+  // Current sprint
+  const now2=new Date();
+  const curIter=allIterations.find(it=>{
+    const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+    return s&&e&&now2>=s&&now2<=e;
+  })||allIterations[allIterations.length-1]||null;
+  const sprintItems=curIter?allWI.filter(w=>getIterShort(w.fields)===curIter.name):[];
+  const sprintDone=sprintItems.filter(w=>isDone(w.fields));
+  const sprintPct=sprintItems.length>0?Math.round(sprintDone.length/sprintItems.length*100):0;
+
+  // Health score
+  let score=100;
+  if(delayed.length)score-=Math.min(20,delayed.length*2);
+  if(stale.length)score-=Math.min(15,stale.length*2);
+  if(unassigned.length)score-=Math.min(10,unassigned.length);
+  if(acPct<50)score-=20;else if(acPct<75)score-=10;
+  if(updateRate<50)score-=15;else if(updateRate<70)score-=8;
+  score=Math.max(0,Math.min(100,score));
+
+  return{delayed,stale,unassigned,done:done.length,total,pct,score,curIter,sprintPct,sprintItems,active,allWI,allIterations,acPct,updateRate};
+}
+
+function renderMasterDashboard(){
+  const entries=Object.values(masterData);
+  if(!entries.length){$('master-proj-grid').innerHTML='<div class="empty">No project data loaded.</div>';return;}
+
+  const allStats=entries.map(d=>({...d,stats:getMasterStats(d)}));
+
+  // ── ORG KPIs ──
+  const totalDelayed=allStats.reduce((a,d)=>a+d.stats.delayed.length,0);
+  const totalStale=allStats.reduce((a,d)=>a+d.stats.stale.length,0);
+  const totalUnassigned=allStats.reduce((a,d)=>a+d.stats.unassigned.length,0);
+  const atRisk=allStats.filter(d=>d.stats.score<60).length;
+  const avgScore=Math.round(allStats.reduce((a,d)=>a+d.stats.score,0)/allStats.length);
+  const avgScoreCol=avgScore>=70?'green':avgScore>=50?'amber':'red';
+
+  $('master-kpis').innerHTML=`
+    <div class="kpi teal"><div class="kl">Active projects</div><div class="kv teal">${allStats.length}</div><div class="ks">across ${ORG.replace('https://dev.azure.com/','')}</div></div>
+    <div class="kpi red"><div class="kl">At risk / critical</div><div class="kv red">${atRisk}</div><div class="ks">score below 60</div></div>
+    <div class="kpi amber"><div class="kl">Total delayed tasks</div><div class="kv amber">${totalDelayed}</div><div class="ks">across all projects</div></div>
+    <div class="kpi amber"><div class="kl">Stale items</div><div class="kv amber">${totalStale}</div><div class="ks">7+ days no update</div></div>
+    <div class="kpi red"><div class="kl">Unassigned items</div><div class="kv red">${totalUnassigned}</div><div class="ks">no owner</div></div>
+    <div class="kpi ${avgScoreCol}"><div class="kl">Avg health score</div><div class="kv ${avgScoreCol}">${avgScore}</div><div class="ks">portfolio average</div></div>
+  `;
+
+  // ── ALARM ──
+  const alarmItems=[];
+  if(atRisk>0)alarmItems.push({label:atRisk+' project'+(atRisk>1?'s':'')+' at risk (score < 60)',col:'red'});
+  if(totalDelayed>0)alarmItems.push({label:totalDelayed+' delayed tasks across all projects',col:'red'});
+  if(totalUnassigned>0)alarmItems.push({label:totalUnassigned+' unassigned items',col:'amber'});
+  if(alarmItems.length){
+    $('master-alarm').style.display='flex';
+    $('master-alarm-title').textContent=alarmItems.length+' portfolio-wide issue'+(alarmItems.length>1?'s':'')+' require attention';
+    $('master-alarm-pills').innerHTML=alarmItems.map(a=>'<span class="ap">'+a.label+'</span>').join('');
+  } else {
+    $('master-alarm').style.display='none';
+  }
+
+  // ── PROJECT CARDS ──
+  const sorted=allStats.sort((a,b)=>a.stats.score-b.stats.score);
+  $('master-proj-grid').innerHTML=sorted.map((d,idx)=>{
+    const s=d.stats;
+    const col=color(allProjects.findIndex(p=>p.id===d.proj.id));
+    const scoreCol=s.score>=70?'var(--green)':s.score>=50?'var(--amber)':'var(--red)';
+    const scoreBadge=s.score>=70?'green':s.score>=50?'amber':'red';
+    const sprintBarCol=s.sprintPct>=80?'var(--green)':s.sprintPct>=50?'var(--blue)':'var(--red)';
+    const alerts=[];
+    if(s.delayed.length>0)alerts.push({dot:'red',text:s.delayed.length+' task'+(s.delayed.length>1?'s':'')+' delayed'});
+    if(s.stale.length>0)alerts.push({dot:'amber',text:s.stale.length+' item'+(s.stale.length>1?'s':'')+' stale 7+ days'});
+    if(s.unassigned.length>0)alerts.push({dot:'amber',text:s.unassigned.length+' item'+(s.unassigned.length>1?'s':'')+' unassigned'});
+    if(s.acPct<75)alerts.push({dot:'amber',text:'Story quality at '+s.acPct+'% — needs improvement'});
+    if(!alerts.length)alerts.push({dot:'green',text:'No critical issues detected'});
+    const sprintLabel=s.curIter?s.curIter.name:'No sprint';
+    return`<div class="master-proj-card">
+      <div class="mpc-top">
+        <div class="mpc-av" style="background:${col}">${initials(d.proj.name)}</div>
+        <div style="flex:1"><div class="mpc-name">${esc(d.proj.name)}</div><div class="mpc-sub">${s.allWI.length} items · ${s.allIterations.length} sprints</div></div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:600;color:${scoreCol}">${s.score}</div>
+          <div style="font-size:9px;color:var(--text-3)">health score</div>
+        </div>
+      </div>
+      <div class="mpc-body">
+        <div class="mpc-mini-kpis">
+          <div class="mpc-mk"><div class="mpc-mk-l">Delayed</div><div class="mpc-mk-v" style="color:${s.delayed.length>0?'var(--red)':'var(--green)'}">${s.delayed.length}</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">Stale</div><div class="mpc-mk-v" style="color:${s.stale.length>0?'var(--amber)':'var(--green)'}">${s.stale.length}</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">Unassigned</div><div class="mpc-mk-v" style="color:${s.unassigned.length>0?'var(--amber)':'var(--green)'}">${s.unassigned.length}</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">Done</div><div class="mpc-mk-v" style="color:${s.pct>=70?'var(--green)':'var(--text)'}">${s.pct}%</div></div>
+        </div>
+        <div class="mpc-spr-row">
+          <span class="mpc-spr-label">${esc(sprintLabel)}</span>
+          <div class="mpc-spr-bar"><div class="mpc-spr-fill" style="width:${s.sprintPct}%;background:${sprintBarCol}"></div></div>
+          <span class="mpc-spr-pct" style="color:${sprintBarCol}">${s.sprintPct}%</span>
+        </div>
+        <div class="mpc-alerts">${alerts.slice(0,2).map(a=>`<div class="mpc-alert"><div class="mpc-alert-dot" style="background:${a.dot==='red'?'var(--red)':a.dot==='green'?'var(--green)':'var(--amber)'}"></div>${esc(a.text)}</div>`).join('')}</div>
+        <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard &#8594;</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── CRITICAL ITEMS TABLE ──
+  const allCritical=[];
+  allStats.forEach(d=>{
+    d.stats.delayed.filter(w=>(w.fields['System.WorkItemType']||'')==='Task').slice(0,3).forEach(w=>{
+      const iter=d.stats.allIterations.find(it=>it.name===getIterShort(w.fields));
+      const daysLate=iter?.attributes?.finishDate?daysSince(iter.attributes.finishDate):0;
+      allCritical.push({id:w.id,proj:d.proj.name,issue:daysLate+'d late',person:getAssignee(w.fields)||'Unassigned',severity:'red',projId:d.proj.id});
+    });
+    d.stats.stale.filter(w=>(w.fields['System.WorkItemType']||'')==='Task').slice(0,2).forEach(w=>{
+      const days=daysSince(w.fields['System.ChangedDate']);
+      allCritical.push({id:w.id,proj:d.proj.name,issue:days+'d stale',person:getAssignee(w.fields)||'Unassigned',severity:'amber',projId:d.proj.id});
+    });
+  });
+  allCritical.sort((a,b)=>parseInt(b.issue)-parseInt(a.issue));
+  $('master-critical').innerHTML=allCritical.length?`
+    <table class="wi" style="table-layout:fixed">
+      <thead><tr><th style="width:60px">ID</th><th>Project</th><th style="width:90px">Issue</th><th style="width:100px">Assigned to</th></tr></thead>
+      <tbody>${allCritical.slice(0,10).map(c=>`
+        <tr onclick="window.open('${ORG}/'+encodeURIComponent(c.proj)+'/_workitems/edit/'+c.id,'_blank')" style="cursor:pointer">
+          <td class="wi-id-c">#${c.id}</td>
+          <td style="font-size:11px;font-weight:500;color:var(--teal)">${esc(c.proj)}</td>
+          <td><span class="badge ${c.severity}">${esc(c.issue)}</span></td>
+          <td style="font-size:11px;color:var(--text-2)">${esc(c.person)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`:'<div class="empty">No critical items across any project</div>';
+
+  // ── LEADERBOARD ──
+  const personMap={};
+  allStats.forEach(d=>{
+    d.stats.active.forEach(w=>{
+      const n=getAssignee(w.fields)||'Unassigned';
+      if(!personMap[n])personMap[n]={count:0,projs:new Set()};
+      personMap[n].count++;
+      personMap[n].projs.add(d.proj.name);
+    });
+  });
+  const leaders=Object.entries(personMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6);
+  const maxL=leaders[0]?.[1].count||1;
+  const lCols=['#A32D2D','#185FA5','#534AB7','#B07400','#0D6E6E','#888'];
+  $('master-leaderboard').innerHTML=leaders.length?leaders.map(([n,d],i)=>`
+    <div class="leader-row">
+      <span style="font-size:11px;font-weight:500;color:var(--text-3);width:18px;text-align:center">${i+1}</span>
+      <div class="av" style="background:${lCols[i%lCols.length]}">${initials(n)}</div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--text)">${esc(n)}</div>
+        <div style="font-size:10px;color:var(--text-3)">${[...d.projs].slice(0,2).map(esc).join(' · ')}</div>
+      </div>
+      <div style="width:80px;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-right:8px">
+        <div style="width:${Math.round(d.count/maxL*100)}%;height:100%;background:${lCols[i%lCols.length]};border-radius:3px"></div>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:var(--text);min-width:22px;text-align:right">${d.count}</span>
+      ${i===0&&d.count>maxL*0.8&&leaders.length>1?'<span class="badge red" style="margin-left:6px">High</span>':''}
+    </div>`).join(''):'<div class="empty">No active assignments</div>';
+
+  // ── HEALTH SCORE COMPARISON ──
+  const scoresSorted=[...allStats].sort((a,b)=>b.stats.score-a.stats.score);
+  $('master-scores').innerHTML=scoresSorted.map(d=>{
+    const s=d.stats.score;
+    const col=s>=70?'var(--green)':s>=50?'var(--amber)':'var(--red)';
+    return`<div class="score-bar-row">
+      <div style="width:140px;font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.proj.name)}</div>
+      <div style="flex:1;height:10px;background:var(--bg);border-radius:5px;overflow:hidden">
+        <div style="width:${s}%;height:100%;background:${col};border-radius:5px"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:${col};min-width:36px;text-align:right">${s}</div>
+    </div>`;
+  }).join('');
+}
+
+function drillIntoProject(name){
+  const idx=allProjects.findIndex(p=>p.name===name);
+  if(idx<0)return;
+  selectProject(name,idx);
+}
+
+function doLogout(){
+  ORG='';AUTH='';allWI=[];allIterations=[];currentProject='';allProjects=[];
+  selectedSprintIdx=null;projectAuthMap={};masterData={};isFurqanMode=false;
+  $('inp-pat').value='';
+  $('login-err').style.display='none';
+  $('login-status').style.display='none';
+  $('login-btn').classList.remove('loading');
+  $('login-btn').disabled=false;
+  $('login-btn-text').textContent='Connect & Load Projects →';
+  showScreen('login-screen');
+}
 
 function showScoreModal(){
   $('modal-title').textContent='How the health score is calculated';
@@ -1525,5 +1693,55 @@ function showScoreModal(){
   $('modal-ov').classList.add('open');
 }
 </script>
+
+<!-- ══ MASTER DASHBOARD ══ -->
+<div id="master-screen" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></div>
+    <div><div class="topbar-title">PMO Master Dashboard</div><div class="topbar-org" id="master-org"></div></div>
+    <div class="topbar-div"></div>
+    <div style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:3px 12px;font-size:11px;color:#fff">Portfolio view — all projects</div>
+    <div class="topbar-space"></div>
+    <div class="status-chip"><span class="sdot loading" id="master-sdot"></span><span id="master-stext">Loading...</span></div>
+    <button class="tb-btn" onclick="loadMasterDashboard()">&#8635; Refresh</button>
+    <button class="tb-btn" onclick="doLogout()">Sign out</button>
+  </div>
+  <div class="main">
+    <!-- MASTER ALARM -->
+    <div class="alarm-bar" id="master-alarm" style="display:none;margin-bottom:16px">
+      <div class="alarm-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:#791F1F" id="master-alarm-title"></div><div class="alarm-pills" id="master-alarm-pills"></div></div>
+    </div>
+
+    <!-- ORG KPIs -->
+    <div class="slabel" style="margin-top:4px">Portfolio overview</div>
+    <div class="kpi-grid" id="master-kpis"></div>
+
+    <!-- PROJECT CARDS -->
+    <div class="slabel">Project health cards</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px" id="master-proj-grid"></div>
+
+    <!-- BOTTOM ROW: Critical items + Leaderboard -->
+    <div class="slabel">Cross-project intelligence</div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="ptitle">Critical items across all projects <span class="ptitle-sub">needs action today</span></div>
+        <div id="master-critical"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Most loaded resources <span class="ptitle-sub">across all projects</span></div>
+        <div id="master-leaderboard"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- HEALTH SCORE COMPARISON -->
+    <div class="slabel">Health score comparison</div>
+    <div class="panel">
+      <div class="ptitle">All projects ranked <span class="ptitle-sub">lower score = needs more attention</span></div>
+      <div id="master-scores"></div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

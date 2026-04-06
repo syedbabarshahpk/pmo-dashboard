@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -646,7 +644,7 @@ async function adoFetch(url,opts={}){
 }
 
 // ══ LOGIN ══
-async 
+
 
 
 
@@ -689,13 +687,13 @@ async function doLogin(){
 
     if(isFurqanMode){
       // Multi-PAT = Furqan — go straight to Master Dashboard
-      setTimeout(()=>loadMasterDashboard(),600);
+      loadMasterDashboard();
     } else {
       // Single PAT = PM — go to project picker
       $('picker-org').textContent='· '+ORG.replace('https://dev.azure.com/','');
       $('picker-sub').textContent=allProjects.length+' project'+(allProjects.length!==1?'s':'')+' loaded. Click one to open its dashboard.';
       renderProjectGrid(allProjects);
-      setTimeout(()=>showScreen('picker-screen'),600);
+      showScreen('picker-screen');
     }
   }catch(e){
     errEl.style.display='block';

@@ -298,6 +298,93 @@ table.wi tr:hover td{background:#fafaf8;}
 .score-total-label{font-size:12px;font-weight:500;color:var(--text);}
 .score-ranges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
 .score-range-pill{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;}
+
+/* LINKED ITEM ROWS */
+.linked-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,.05);cursor:pointer;transition:background .15s;border-radius:4px;}
+.linked-row:last-child{border-bottom:none;}
+.linked-row:hover{background:#f8f7f4;padding-left:4px;}
+.linked-row:hover .ado-link-btn{opacity:1;}
+.ado-link-btn{font-size:9px;padding:2px 7px;border-radius:20px;background:#E6F1FB;color:#185FA5;border:none;cursor:pointer;opacity:0;transition:opacity .2s;white-space:nowrap;flex-shrink:0;font-family:var(--font);font-weight:500;}
+.ado-link-btn:hover{background:#185FA5;color:#fff;}
+
+/* ALARM SECTION LINKS */
+.alarm-section-link{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;background:rgba(163,45,45,.15);color:#791F1F;cursor:pointer;border:none;font-family:var(--font);margin-left:auto;flex-shrink:0;transition:background .15s;}
+.alarm-section-link:hover{background:rgba(163,45,45,.3);}
+
+/* INFO MODAL for KPI cards */
+.kpi-info-btn{position:absolute;top:8px;right:8px;width:16px;height:16px;border-radius:50%;border:1px solid var(--border-mid);background:transparent;color:var(--text-3);font-size:9px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--font);transition:all .2s;line-height:1;}
+.kpi-info-btn:hover{border-color:var(--teal);color:var(--teal);}
+
+/* SPRINT TYPE FILTER */
+.type-filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.type-filter-pill{font-size:10px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--border-mid);cursor:pointer;color:var(--text-2);background:var(--surface);transition:all .15s;font-family:var(--font);}
+.type-filter-pill:hover{border-color:var(--teal);color:var(--teal);}
+.type-filter-pill.active{color:#fff;border-color:transparent;}
+
+/* TASK ITEM IN FORECAST */
+.task-forecast-item{background:rgba(255,255,255,.65);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:box-shadow .15s;}
+.task-forecast-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.task-forecast-item:last-child{margin-bottom:0;}
+.tfi-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.tfi-id{font-family:var(--mono);font-size:10px;color:var(--text-3);}
+.tfi-title{font-size:11px;font-weight:500;color:var(--text);flex:1;}
+.tfi-assignee{font-size:10px;color:var(--text-2);}
+.tfi-assignee span{font-weight:500;}
+.tfi-meta{display:flex;gap:6px;align-items:center;padding-left:2px;}
+
+/* US QUALITY FILTER TABS */
+.us-filter-tabs{display:flex;gap:5px;margin-bottom:10px;}
+.us-tab{font-size:11px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border-mid);cursor:pointer;color:var(--text-2);background:var(--surface);font-family:var(--font);transition:all .15s;}
+.us-tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+/* US QUALITY ITEM */
+.us-quality-item{border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .2s;}
+.us-quality-item:hover{border-color:var(--teal);}
+.us-quality-item:last-child{margin-bottom:0;}
+.usq-header{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.usq-feedback{background:#F4F3EF;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text-2);line-height:1.6;}
+.usq-feedback .fb-label{font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.usq-suggestion{background:var(--teal-light);border-radius:6px;padding:8px 10px;margin-top:6px;font-size:11px;color:#0D6E6E;line-height:1.6;cursor:pointer;transition:background .15s;}
+.usq-suggestion:hover{background:#C0E8E8;}
+.usq-suggestion .sug-label{font-size:9px;font-weight:600;color:#0D6E6E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;display:flex;align-items:center;gap:4px;}
+.copy-icon{font-size:10px;}
+
+/* CLARITY COMMENT ITEM */
+.clarity-item{border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;}
+.clarity-item:last-child{margin-bottom:0;}
+.ci-header{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.ci-comment{background:#F4F3EF;border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text-2);line-height:1.5;margin-top:6px;font-style:italic;}
+.ci-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:10px;color:var(--text-3);}
+.ci-meta span{display:flex;align-items:center;gap:3px;}
+
+/* HEALTH SUGGESTION */
+.health-suggestion{background:#E0F5F5;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:11px;color:#0D6E6E;line-height:1.5;}
+.health-suggestion .hs-label{font-size:9px;font-weight:600;color:#0D6E6E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+
+/* CHART TABS */
+.view-toggle{display:flex;gap:5px;margin-bottom:14px;}
+.vt-btn{font-size:11px;padding:5px 13px;border-radius:20px;border:0.5px solid var(--border-mid);cursor:pointer;color:var(--text-2);background:var(--surface);font-family:var(--font);transition:all .15s;}
+.vt-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.chart-container{height:300px;position:relative;margin-bottom:1rem;}
+
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
+.filter-bar label{font-size:11px;color:var(--text-3);white-space:nowrap;}
+.filter-select{font-family:var(--font);font-size:11px;padding:5px 10px;border-radius:var(--r-sm);border:0.5px solid var(--border-mid);background:var(--surface);color:var(--text);cursor:pointer;outline:none;}
+.filter-select:focus{border-color:var(--teal);}
+.filter-input{font-family:var(--font);font-size:11px;padding:5px 10px;border-radius:var(--r-sm);border:0.5px solid var(--border-mid);background:var(--surface);color:var(--text);outline:none;min-width:160px;}
+.filter-input:focus{border-color:var(--teal);}
+.filter-clear{font-size:11px;color:var(--text-3);cursor:pointer;background:none;border:none;font-family:var(--font);text-decoration:underline;}
+.filter-clear:hover{color:var(--text);}
+
+/* KPI INFO MODALS */
+.kpi-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:999;display:none;align-items:center;justify-content:center;padding:2rem;}
+.kpi-modal-overlay.open{display:flex;}
+.kpi-modal-card{background:var(--surface);border-radius:14px;padding:0;max-width:420px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.18);max-height:70vh;overflow-y:auto;}
+.kpi-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:0.5px solid var(--border);}
+.kpi-modal-title{font-size:13px;font-weight:600;color:var(--text);}
+.kpi-modal-close{width:26px;height:26px;border-radius:7px;border:none;background:var(--bg);cursor:pointer;font-size:12px;color:var(--text-2);}
+.kpi-modal-body{padding:14px 18px;font-size:12px;color:var(--text-2);line-height:1.7;}
 </style>
 </head>
 <body>
@@ -315,15 +402,16 @@ table.wi tr:hover td{background:#fafaf8;}
       <input type="text" id="inp-org" placeholder="https://dev.azure.com/your-org" value="https://dev.azure.com/verokeinc">
     </div>
     <div class="field">
-      <label>Personal Access Token (PAT)</label>
-      <input type="password" id="inp-pat" class="mono" placeholder="Paste your PAT here">
+      <label>Personal Access Tokens (PAT)</label>
+      <textarea id="inp-pat" class="mono" placeholder="Paste your PAT here" rows="3" style="width:100%;padding:10px 13px;border:1.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--mono);font-size:11px;color:var(--text);background:var(--bg);outline:none;resize:none;transition:border-color .2s;line-height:1.6;"></textarea>
     </div>
+    <div id="pat-status" style="display:none;margin-bottom:.5rem;"></div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">
       <div class="login-spinner"></div>
       <span class="login-btn-text">Connect &amp; Load Projects &#8594;</span>
     </button>
     <div class="login-error" id="login-error"></div>
-    <p class="login-note">Your PAT stays in your browser and is never stored or sent anywhere except directly to Azure DevOps.</p>
+    <p class="login-note">Enter one PAT or multiple PATs separated by commas. All projects across all PATs will be merged into one project picker. PATs never leave your browser.</p>
   </div>
 </div>
 
@@ -336,7 +424,7 @@ table.wi tr:hover td{background:#fafaf8;}
   </div>
   <div class="picker-body">
     <div class="picker-heading">Select a project</div>
-    <div class="picker-sub">Choose the project you want to view the dashboard for.</div>
+    <div class="picker-sub" id="picker-sub-text">Choose the project you want to view the dashboard for.</div>
     <input class="picker-search" type="text" placeholder="Search projects..." oninput="filterProjects(this.value)" id="proj-search">
     <div class="picker-error" id="picker-error"></div>
     <div class="proj-grid" id="proj-grid"><div class="picker-loading">Loading projects...</div></div>
@@ -373,7 +461,7 @@ table.wi tr:hover td{background:#fafaf8;}
     <!-- ALARM BAR -->
     <div class="alarm-bar" id="alarm-bar" style="display:none">
       <div class="alarm-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
-      <div><div style="font-size:12px;font-weight:600;color:#791F1F;" id="alarm-title"></div><div class="alarm-pills" id="alarm-pills"></div></div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:#791F1F;" id="alarm-title"></div><div class="alarm-pills" id="alarm-pills"></div></div>
     </div>
 
     <!-- KPIs -->
@@ -406,12 +494,12 @@ table.wi tr:hover td{background:#fafaf8;}
     <div class="slabel">Items needing immediate action</div>
     <div class="two-col">
       <div class="panel">
-        <div class="ptitle">Delayed items <span class="ptitle-sub" id="delayed-count"></span></div>
+        <div id="delayed-section" style="scroll-margin-top:70px"></div><div class="ptitle">Delayed items <span class="ptitle-sub" id="delayed-count"></span></div>
         <div id="delayed-type-legend" class="type-legend"></div>
         <div id="delayed-list"><div class="empty">Loading...</div></div>
       </div>
       <div class="panel">
-        <div class="ptitle">Stale 7+ days <span class="ptitle-sub">no activity</span></div>
+        <div id="stale-section" style="scroll-margin-top:70px"></div><div class="ptitle">Stale 7+ days <span class="ptitle-sub">in progress only</span></div>
         <div id="stale-type-legend" class="type-legend"></div>
         <div id="stale-list"><div class="empty">Loading...</div></div>
       </div>
@@ -421,12 +509,22 @@ table.wi tr:hover td{background:#fafaf8;}
     <div class="slabel">User story quality & clarity</div>
     <div class="two-col">
       <div class="panel">
-        <div class="ptitle">Low quality stories <span class="ptitle-sub">missing criteria / scope changes</span></div>
+        <div class="ptitle">Quality flags <span class="ptitle-sub">click item for AI feedback</span></div>
+        <div class="us-filter-tabs">
+          <button class="us-tab active" onclick="filterQuality('all',this)">All</button>
+          <button class="us-tab" onclick="filterQuality('User Story',this)">User Stories</button>
+          <button class="us-tab" onclick="filterQuality('Task',this)">Tasks</button>
+        </div>
         <div id="quality-type-legend" class="type-legend"></div>
         <div id="quality-list"><div class="empty">Loading...</div></div>
       </div>
       <div class="panel">
         <div class="ptitle">Unanswered clarity comments <span class="ptitle-sub">blocking developers</span></div>
+        <div class="us-filter-tabs">
+          <button class="us-tab active" onclick="filterClarity('all',this)">All</button>
+          <button class="us-tab" onclick="filterClarity('User Story',this)">User Stories</button>
+          <button class="us-tab" onclick="filterClarity('Task',this)">Tasks</button>
+        </div>
         <div id="clarity-list"><div class="empty">Loading...</div></div>
       </div>
     </div>
@@ -435,7 +533,7 @@ table.wi tr:hover td{background:#fafaf8;}
     <div class="slabel">Resources & delivery health</div>
     <div class="three-col">
       <div class="panel">
-        <div class="ptitle">Workload — active items per person</div>
+        <div id="workload-section" style="scroll-margin-top:70px"></div><div class="ptitle">Workload — active items per person</div>
         <div id="workload-list"><div class="empty">Loading...</div></div>
       </div>
       <div class="panel">
@@ -451,23 +549,46 @@ table.wi tr:hover td{background:#fafaf8;}
     <!-- ALL WORK ITEMS -->
     <div class="slabel">All work items</div>
     <div class="panel">
-      <div class="tab-bar">
-        <button class="tab active" onclick="fw('all',this)">All</button>
-        <button class="tab" onclick="fw('active',this)">Active</button>
-        <button class="tab" onclick="fw('new',this)">New</button>
-        <button class="tab" onclick="fw('resolved',this)">Resolved</button>
-        <button class="tab" onclick="fw('closed',this)">Closed</button>
-        <button class="tab" onclick="fw('type:User Story',this)">Stories</button>
-        <button class="tab" onclick="fw('type:Bug',this)">Bugs</button>
-        <button class="tab" onclick="fw('type:Task',this)">Tasks</button>
-        <button class="tab" onclick="fw('type:Epic',this)">Epics</button>
-        <button class="tab" onclick="fw('type:Feature',this)">Features</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <div class="view-toggle">
+          <button class="vt-btn active" onclick="switchWIView('table',this)">Table</button>
+          <button class="vt-btn" onclick="switchWIView('pie',this)">Pie chart</button>
+          <button class="vt-btn" onclick="switchWIView('bar',this)">Bar chart</button>
+        </div>
+        <div class="filter-bar">
+          <label>Filter:</label>
+          <select class="filter-select" id="wi-filter-type" onchange="applyWIFilters()">
+            <option value="">All types</option>
+            <option value="User Story">User Story</option>
+            <option value="Task">Task</option>
+            <option value="Bug">Bug</option>
+            <option value="Epic">Epic</option>
+            <option value="Feature">Feature</option>
+          </select>
+          <select class="filter-select" id="wi-filter-state" onchange="applyWIFilters()">
+            <option value="">All states</option>
+            <option value="New">New</option>
+            <option value="Active">Active</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Closed">Closed</option>
+          </select>
+          <select class="filter-select" id="wi-filter-sprint" onchange="applyWIFilters()">
+            <option value="">All sprints</option>
+          </select>
+          <input class="filter-input" id="wi-filter-text" placeholder="Search title..." oninput="applyWIFilters()">
+          <button class="filter-clear" onclick="clearWIFilters()">Clear filters</button>
+        </div>
       </div>
+      <div id="wi-chart-area" style="display:none">
+        <canvas id="wi-chart" style="max-height:320px"></canvas>
+      </div>
+      <div id="wi-table-area">
       <div class="wi-scroll">
         <table class="wi">
           <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>State</th><th>Pts</th><th>Sprint</th><th>Assigned To</th><th>Created By</th></tr></thead>
           <tbody id="wi-tbody"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
         </table>
+      </div>
       </div>
       <div class="wi-count-label" id="wi-count"></div>
     </div>
@@ -497,6 +618,7 @@ table.wi tr:hover td{background:#fafaf8;}
 <script>
 let ORG='',AUTH='';
 let allWI=[],allIterations=[],currentProject='',allProjects=[],selectedSprintIdx=null;
+let projectAuthMap={};  // maps project.id -> AUTH header for that project
 const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
@@ -530,6 +652,11 @@ async function init(){
 
 function renderProjectGrid(projects){
   const grid=document.getElementById('proj-grid');
+  const subEl=document.getElementById('picker-sub-text');
+  if(subEl){
+    const patCount=new Set(Object.values(projectAuthMap)).size;
+    subEl.textContent=allProjects.length+' project'+(allProjects.length!==1?'s':'')+' loaded'+(patCount>1?' across '+patCount+' PATs':'')+'. Click one to open its dashboard.';
+  }
   if(!projects.length){grid.innerHTML='<div class="picker-loading">No matching projects.</div>';return;}
   grid.innerHTML=projects.map(p=>{
     const i=allProjects.indexOf(p);
@@ -546,6 +673,9 @@ function filterProjects(q){renderProjectGrid(allProjects.filter(p=>p.name.toLowe
 
 function selectProject(name,idx){
   currentProject=name;
+  // Switch AUTH to the PAT that owns this project
+  const proj=allProjects.find(p=>p.name===name);
+  if(proj&&projectAuthMap[proj.id]){AUTH=projectAuthMap[proj.id];}
   const col=color(idx);
   ['chip-avatar','ph-avatar'].forEach(id=>{
     document.getElementById(id).style.background=col;
@@ -610,10 +740,12 @@ function renderAll(){
   renderKPIs();
   renderSprintTimeline();
   renderDelayedStale();
-  renderQualityClarity();
+  renderQualityClarity('all');
   renderWorkloadCreators();
   renderHealthChecks();
+  currentWIItems=allWI;
   renderWITable(allWI);
+  populateSprintFilter();
   renderSummary();
 }
 
@@ -646,17 +778,19 @@ function renderAlarm(){
   const stale=getStaleItems();
   const unassigned=allWI.filter(w=>!getAssigneeName(w.fields)&&!isDone(w.fields));
   const noReporter=allWI.filter(w=>!w.fields['System.CreatedBy']&&!isDone(w.fields));
-  const pills=[];
-  if(delayed.length)pills.push(delayed.length+' delayed items');
-  if(stale.length)pills.push(stale.length+' stale 7+ days');
-  if(unassigned.length)pills.push(unassigned.length+' unassigned');
-  if(noReporter.length)pills.push(noReporter.length+' no reporter');
-  const issues=pills.length;
+  const sections=[
+    {count:delayed.length, label:'delayed items', anchor:'delayed-section'},
+    {count:stale.length, label:'stale 7+ days', anchor:'stale-section'},
+    {count:unassigned.length, label:'unassigned', anchor:'workload-section'},
+    {count:noReporter.length, label:'no reporter', anchor:'workload-section'},
+  ].filter(s=>s.count>0);
   const bar=document.getElementById('alarm-bar');
-  if(issues===0){bar.style.display='none';return;}
+  if(!sections.length){bar.style.display='none';return;}
   bar.style.display='flex';
-  document.getElementById('alarm-title').textContent=issues+' issue'+(issues>1?'s':'')+' require attention';
-  document.getElementById('alarm-pills').innerHTML=pills.map(p=>'<span class="ap">'+p+'</span>').join('');
+  document.getElementById('alarm-title').textContent=sections.length+' issue'+(sections.length>1?'s':'')+' require attention — click to review';
+  document.getElementById('alarm-pills').innerHTML=sections.map(s=>
+    '<span class="ap" style="cursor:pointer" onclick="document.getElementById(''+s.anchor+'').scrollIntoView({behavior:'smooth',block:'start'})">'+s.count+' '+s.label+' &#8594;</span>'
+  ).join('');
 }
 
 // ── KPIs ──
@@ -808,8 +942,9 @@ function renderSprintDetail(){
     <div class="sprint-progress-label">${pct}% complete · ${items.length-doneItems.length} items remaining${daysLeft>0?' · '+daysLeft+' days left':''}</div>
   </div>`;
 
-  // Add type breakdown below the sprint detail box
-  const typeBreakdown = buildTypeBreakdown(items);
+  // Sprint: Tasks and Features only type breakdown
+  const tlItems=items.filter(w=>['Task','Feature'].includes(w.fields['System.WorkItemType']));
+  const typeBreakdown = buildTypeBreakdown(tlItems.length?tlItems:items);
   document.getElementById('sprint-detail-area').innerHTML += typeBreakdown;
 
   document.getElementById('forecast-sprint-label').textContent='— '+it.name;
@@ -818,6 +953,14 @@ function renderSprintDetail(){
 
 
 
+
+function adoItemUrl(id){
+  return ORG+'/'+encodeURIComponent(currentProject)+'/_workitems/edit/'+id;
+}
+function openAdo(id,e){
+  if(e)e.stopPropagation();
+  window.open(adoItemUrl(id),'_blank');
+}
 function buildTypeLegend(items){
   if(!items||!items.length)return'';
   const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Test Case':'#3B6D11','Issue':'#993C1D','Other':'#888780'};
@@ -980,60 +1123,181 @@ function renderForecast(){
 
 // ── DELAYED & STALE ──
 function renderDelayedStale(){
-  const delayed=getDelayedItems().slice(0,8);
-  const stale=getStaleItems();
-  const staleSliced=stale.slice(0,8);
-  const allDelayed=getDelayedItems();
-  document.getElementById('delayed-count').textContent=allDelayed.length+' total';
+  // Delayed — Tasks only, linked
+  const allDelayed=getDelayedItems().filter(w=>(w.fields['System.WorkItemType']||'').toLowerCase()==='task');
+  const delayed=allDelayed.slice(0,8);
+  document.getElementById('delayed-count').textContent=allDelayed.length+' tasks';
   document.getElementById('delayed-type-legend').innerHTML=buildTypeLegend(allDelayed);
-  document.getElementById('stale-type-legend').innerHTML=buildTypeLegend(stale);
+
   document.getElementById('delayed-list').innerHTML=delayed.length?delayed.map(w=>{
     const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
     const daysLate=iter?.attributes?.finishDate?daysSince(iter.attributes.finishDate):0;
     const person=getAssigneeName(w.fields)||'Unassigned';
-    return `<div class="row"><span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span><span class="badge ${daysLate>5?'red':'amber'}">${daysLate}d late</span><span class="wi-person">${esc(person)}</span></div>`;
-  }).join(''):'<div class="empty" style="padding:1rem">No delayed items</div>';
+    return `<div class="linked-row" onclick="openAdo(${w.id})">
+      <span class="wi-id">#${w.id}</span>
+      <span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,40))}</span>
+      <span class="badge ${daysLate>5?'red':'amber'}">${daysLate}d late</span>
+      <span class="wi-person">${esc(person)}</span>
+      <button class="ado-link-btn" onclick="openAdo(${w.id},event)">Open in ADO &#8599;</button>
+    </div>`;
+  }).join('')+(allDelayed.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allDelayed.length-8)+' more tasks</div>':'')
+  :'<div class="empty" style="padding:1rem">No delayed tasks</div>';
+
+  // Stale — Tasks only, In Progress only, linked
+  const allStale=getStaleItems().filter(w=>{
+    const t=(w.fields['System.WorkItemType']||'').toLowerCase();
+    const s=(w.fields['System.State']||'').toLowerCase();
+    return t==='task'&&['active','in progress','doing','committed'].includes(s);
+  });
+  const staleSliced=allStale.slice(0,8);
+  document.getElementById('stale-type-legend').innerHTML=buildTypeLegend(allStale);
 
   document.getElementById('stale-list').innerHTML=staleSliced.length?staleSliced.map(w=>{
     const days=daysSince(w.fields['System.ChangedDate']);
     const person=getAssigneeName(w.fields)||'Unassigned';
-    return `<div class="row"><span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span><span class="badge ${days>10?'red':'amber'}">${days}d</span><span class="wi-person">${esc(person)}</span></div>`;
-  }).join('')+'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">'+( stale.length>8?'+'+(stale.length-8)+' more':'')+'</div>'
-    :'<div class="empty" style="padding:1rem">No stale items</div>';
+    return `<div class="linked-row" onclick="openAdo(${w.id})">
+      <span class="wi-id">#${w.id}</span>
+      <span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,40))}</span>
+      <span class="badge ${days>10?'red':'amber'}">${days}d no update</span>
+      <span class="wi-person">${esc(person)}</span>
+      <button class="ado-link-btn" onclick="openAdo(${w.id},event)">Open in ADO &#8599;</button>
+    </div>`;
+  }).join('')+(allStale.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allStale.length-8)+' more</div>':'')
+  :'<div class="empty" style="padding:1rem">No stale in-progress tasks</div>';
 }
 
 // ── QUALITY ──
-function renderQualityClarity(){
-  const stories=allWI.filter(w=>isStory(w.fields)&&!isDone(w.fields));
-  const lowQuality=stories.filter(w=>{
+let allQualityItems=[];
+let allClarityItems=[];
+
+function getQualityFeedback(w){
+  const f=w.fields;
+  const issues=[];
+  const suggestions=[];
+  const t=f['System.WorkItemType']||'';
+  const noAC=!f['Microsoft.VSTS.Common.AcceptanceCriteria']||f['Microsoft.VSTS.Common.AcceptanceCriteria'].length<10;
+  const noDesc=!f['System.Description']||f['System.Description'].length<20;
+  const noPts=!f['Microsoft.VSTS.Scheduling.StoryPoints'];
+  const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').length;
+
+  if(noAC&&t==='User Story'){issues.push('No acceptance criteria');suggestions.push('Add acceptance criteria using the format: "Given [context], When [action], Then [outcome]". Without this, developers cannot objectively determine when this story is done.');}
+  if(noDesc||descLen<30){issues.push('Description too short or missing');suggestions.push('Expand the description to include: what the user needs to do, why they need it, and any constraints. A good user story description is at least 2-3 sentences.');}
+  if(noPts){issues.push('No story points');suggestions.push('Estimate this item in story points using your team's reference scale. Story points are required for velocity tracking and sprint forecasting.');}
+  if(descLen>10&&descLen<50&&t==='User Story'){suggestions.push('Your current description is brief. Consider adding: acceptance criteria, edge cases, or links to design files to help the developer.');}
+
+  const overallFeedback=issues.length===0?'This item looks good — all key fields are populated.':
+    issues.length===1?'Minor issue: '+issues[0]+'. Addressing this will improve sprint planning accuracy.':
+    'Multiple quality issues found. This item should be improved before entering the next sprint.';
+
+  return{issues,suggestions,overallFeedback,score:Math.max(0,100-issues.length*30)};
+}
+
+function renderQualityItem(w){
+  const f=w.fields;
+  const fb=getQualityFeedback(w);
+  const person=getAssigneeName(f)||'Unassigned';
+  const t=f['System.WorkItemType']||'';
+  const typeClass=tc(t);
+  const tags=fb.issues.map(i=>'<span class="badge '+(i.includes('No acceptance')||i.includes('missing')?'red':'amber')+'">'+i+'</span>').join('');
+  const scoreColor=fb.score>=70?'var(--green)':fb.score>=40?'var(--amber)':'var(--red)';
+  const suggestion=fb.suggestions[0]||'';
+  return `<div class="us-quality-item" onclick="openAdo(${w.id})">
+    <div class="usq-header">
+      <span class="wi-id">#${w.id}</span>
+      <span class="tp ${typeClass}">${esc(t)}</span>
+      <span class="wi-title" style="flex:1;max-width:180px">${esc((f['System.Title']||'').slice(0,45))}</span>
+      <span style="font-size:11px;font-weight:600;color:${scoreColor}">${fb.score}%</span>
+      <button class="ado-link-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599;</button>
+    </div>
+    <div class="qi-tags" style="padding-left:0;margin-bottom:6px">${tags||'<span class="badge green">Good quality</span>'}</div>
+    <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">Assigned to: ${esc(person)}</div>
+    ${fb.issues.length>0?`
+    <div class="usq-feedback">
+      <div class="fb-label">AI feedback</div>
+      ${esc(fb.overallFeedback)}
+    </div>
+    ${suggestion?`<div class="usq-suggestion" onclick="copyToClipboard('${suggestion.replace(/'/g,"\'")}',event)">
+      <div class="sug-label"><span class="copy-icon">&#128203;</span> Suggested fix — click to copy</div>
+      ${esc(suggestion.slice(0,120))}...
+    </div>`:''}`:''} 
+  </div>`;
+}
+
+function copyToClipboard(text,e){
+  if(e)e.stopPropagation();
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=e?.target?.closest('.usq-suggestion');
+    if(btn){const orig=btn.querySelector('.sug-label').textContent;btn.querySelector('.sug-label').textContent='Copied!';setTimeout(()=>{if(btn.querySelector('.sug-label'))btn.querySelector('.sug-label').textContent=orig;},2000);}
+  });
+}
+
+function renderQualityClarity(typeFilter){
+  const filterType=typeFilter||'all';
+  let items=allWI.filter(w=>{
+    const t=w.fields['System.WorkItemType']||'';
+    if(filterType==='User Story')return t==='User Story'&&!isDone(w.fields);
+    if(filterType==='Task')return t==='Task'&&!isDone(w.fields);
+    return ['User Story','Task'].includes(t)&&!isDone(w.fields);
+  });
+  const lowQuality=items.filter(w=>{
     const f=w.fields;
     const noAC=!f['Microsoft.VSTS.Common.AcceptanceCriteria']||f['Microsoft.VSTS.Common.AcceptanceCriteria'].length<10;
     const noDesc=!f['System.Description']||f['System.Description'].length<20;
     const noPts=!f['Microsoft.VSTS.Scheduling.StoryPoints'];
     return noAC||noDesc||noPts;
-  }).slice(0,6);
-
+  });
+  allQualityItems=lowQuality;
+  document.getElementById('quality-type-legend').innerHTML=buildTypeLegend(lowQuality);
   const qEl=document.getElementById('quality-list');
-  document.getElementById('quality-type-legend').innerHTML=buildTypeLegend(stories);
-  qEl.innerHTML=lowQuality.length?lowQuality.map(w=>{
-    const f=w.fields;
-    const tags=[];
-    if(!f['Microsoft.VSTS.Common.AcceptanceCriteria']||f['Microsoft.VSTS.Common.AcceptanceCriteria'].length<10)tags.push('<span class="badge red">No acceptance criteria</span>');
-    if(!f['System.Description']||f['System.Description'].length<20)tags.push('<span class="badge amber">Vague description</span>');
-    if(!f['Microsoft.VSTS.Scheduling.StoryPoints'])tags.push('<span class="badge amber">No story points</span>');
-    const person=getAssigneeName(f)||'Unassigned';
-    return `<div class="qi"><div class="qi-hdr"><span class="wi-id">#${w.id}</span><span class="wi-title" style="max-width:200px">${esc((f['System.Title']||'').slice(0,50))}</span><span class="wi-person">${esc(person)}</span></div><div class="qi-tags">${tags.join('')}</div></div>`;
-  }).join(''):'<div class="empty" style="padding:1rem">All stories have good quality</div>';
+  qEl.innerHTML=lowQuality.length?lowQuality.slice(0,8).map(renderQualityItem).join('')+(lowQuality.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(lowQuality.length-8)+' more items</div>':'')
+    :'<div class="empty" style="padding:1rem">All items have good quality</div>';
 
-  // Clarity — items with comments (proxy for unanswered questions)
-  const withComments=allWI.filter(w=>!isDone(w.fields)&&(w.fields['System.CommentCount']||0)>0).slice(0,6);
+  // Clarity — items with comments, filter by type
+  let clarityItems=allWI.filter(w=>{
+    const t=w.fields['System.WorkItemType']||'';
+    const hasComments=(w.fields['System.CommentCount']||0)>0;
+    if(!hasComments||isDone(w.fields))return false;
+    if(filterType==='User Story')return t==='User Story';
+    if(filterType==='Task')return t==='Task';
+    return ['User Story','Task'].includes(t);
+  });
+  allClarityItems=clarityItems;
   const clEl=document.getElementById('clarity-list');
-  clEl.innerHTML=withComments.length?withComments.map(w=>{
+  clEl.innerHTML=clarityItems.length?clarityItems.slice(0,8).map(w=>{
     const f=w.fields;
     const count=f['System.CommentCount']||0;
     const person=getAssigneeName(f)||'Unassigned';
-    return `<div class="qi"><div class="qi-hdr"><span class="wi-id">#${w.id}</span><span class="wi-title" style="max-width:160px">${esc((f['System.Title']||'').slice(0,40))}</span><span class="badge amber" style="margin-left:auto">${count} comment${count>1?'s':''}</span></div><div class="qi-comment">Assigned to: ${esc(person)} · Check for unanswered questions</div></div>`;
-  }).join(''):'<div class="empty" style="padding:1rem">No comments flagged</div>';
+    const t=f['System.WorkItemType']||'';
+    const typeClass=tc(t);
+    const creator=getCreatedBy(f);
+    return `<div class="clarity-item">
+      <div class="ci-header">
+        <span class="wi-id">#${w.id}</span>
+        <span class="tp ${typeClass}">${esc(t)}</span>
+        <span class="wi-title" style="flex:1;max-width:160px">${esc((f['System.Title']||'').slice(0,40))}</span>
+        <span class="badge amber">${count} comment${count>1?'s':''}</span>
+        <button class="ado-link-btn" style="opacity:1" onclick="openAdo(${w.id},event)">Open &#8599;</button>
+      </div>
+      <div class="ci-comment">Check for unanswered developer questions. ${count} comment thread${count>1?'s':''} — open in ADO to review and respond.</div>
+      <div class="ci-meta">
+        <span>&#128100; Assigned to: <strong>${esc(person)}</strong></span>
+        <span>&#9998; Created by: ${esc(creator)}</span>
+      </div>
+    </div>`;
+  }).join('')+(clarityItems.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(clarityItems.length-8)+' more</div>':'')
+  :'<div class="empty" style="padding:1rem">No open comment threads found</div>';
+}
+
+function filterQuality(type,btn){
+  document.querySelectorAll('#quality-list').forEach(()=>{});
+  btn.closest('.panel').querySelectorAll('.us-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderQualityClarity(type);
+}
+function filterClarity(type,btn){
+  btn.closest('.panel').querySelectorAll('.us-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderQualityClarity(type);
 }
 
 // ── WORKLOAD & CREATORS ──
@@ -1077,17 +1341,30 @@ function renderHealthChecks(){
   const acPct=stories.length>0?Math.round(withAC/stories.length*100):100;
 
   const checks=[
-    {label:'Has assignee',pct:Math.round(withAssignee/total*100)},
-    {label:'Has story points',pct:Math.round(withPts/total*100)},
-    {label:'Has reporter',pct:Math.round(withReporter/total*100)},
-    {label:'In a sprint',pct:Math.round(inSprint/total*100)},
-    {label:'Updated this week',pct:Math.round(updatedThisWeek/total*100)},
-    {label:'Acceptance criteria',pct:acPct},
+    {label:'Has assignee',pct:Math.round(withAssignee/total*100),
+     fix:'Go to ADO Backlog → filter by "Unassigned" → assign each item to a team member. Target: 100%.'},
+    {label:'Has story points',pct:Math.round(withPts/total*100),
+     fix:'Open each unestimated item → set Story Points field. Run a 30-min estimation session with the team using planning poker. Target: 100% before sprint planning.'},
+    {label:'Has reporter',pct:Math.round(withReporter/total*100),
+     fix:'Filter work items with no Created By in ADO → check if they were imported without a user context. Ensure all items are created while logged in.'},
+    {label:'In a sprint',pct:Math.round(inSprint/total*100),
+     fix:'Items not in a sprint are invisible to sprint planning. In ADO Backlog, drag unassigned items into upcoming sprints or mark them as future backlog with a target sprint.'},
+    {label:'Updated this week',pct:Math.round(updatedThisWeek/total*100),
+     fix:'Enforce a daily standup rule: every active item must have a state change or comment before EOD. Set a team alert or Slack reminder. Target: 90%+.'},
+    {label:'Acceptance criteria',pct:acPct,
+     fix:'Open each story missing AC → add criteria in "Given / When / Then" format. No story should enter a sprint without acceptance criteria. Make this a PM gate before sprint planning.'},
   ];
   document.getElementById('health-list').innerHTML=checks.map(c=>{
     const col=c.pct>=80?'var(--green)':c.pct>=60?'var(--amber)':'var(--red)';
-    const tcol=c.pct>=80?'var(--green)':c.pct>=60?'var(--amber)':'var(--red)';
-    return `<div class="health-row"><span class="hl">${c.label}</span><div class="ht"><div class="hf" style="width:${c.pct}%;background:${col}"></div></div><span class="hp" style="color:${tcol}">${c.pct}%</span></div>`;
+    const needsFix=c.pct<80;
+    return `<div class="health-row" style="flex-direction:column;align-items:stretch;gap:5px;">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="hl">${c.label}</span>
+        <div class="ht"><div class="hf" style="width:${c.pct}%;background:${col}"></div></div>
+        <span class="hp" style="color:${col}">${c.pct}%</span>
+      </div>
+      ${needsFix?`<div class="health-suggestion"><div class="hs-label">How to improve</div>${esc(c.fix)}</div>`:''}
+    </div>`;
   }).join('');
 }
 
@@ -1106,7 +1383,7 @@ function renderWITable(items){
     const createdBy=getCreatedBy(f);
     const iter=getIterShort(f);
     const title=esc((f['System.Title']||'—').slice(0,60));
-    return `<tr><td class="wi-id-cell">#${w.id}</td><td><span class="tp ${t}">${esc(f['System.WorkItemType']||'Item')}</span></td><td class="wi-title-cell"><span class="wi-title-main" title="${title}">${title}</span></td><td><span class="sp ${s}">${esc(f['System.State']||'—')}</span></td><td>${pts!=null?'<span class="pts-badge">'+pts+'</span>':'<span style="color:var(--text-3)">—</span>'}</td><td style="font-family:var(--mono);font-size:10px;color:var(--text-3)">${esc(iter)}</td><td style="font-size:11px;color:var(--text-2)">${esc(assignee)}</td><td style="font-size:11px;color:var(--text-2)">${esc(createdBy)}</td></tr>`;
+    return `<tr onclick="openAdo(${w.id})" style="cursor:pointer"><td class="wi-id-cell">#${w.id}</td><td><span class="tp ${t}">${esc(f['System.WorkItemType']||'Item')}</span></td><td class="wi-title-cell"><span class="wi-title-main" title="${title}">${title}</span></td><td><span class="sp ${s}">${esc(f['System.State']||'—')}</span></td><td>${pts!=null?'<span class="pts-badge">'+pts+'</span>':'<span style="color:var(--text-3)">—</span>'}</td><td style="font-family:var(--mono);font-size:10px;color:var(--text-3)">${esc(iter)}</td><td style="font-size:11px;color:var(--text-2)">${esc(assignee)}</td><td style="font-size:11px;color:var(--text-2)">${esc(createdBy)}</td></tr>`;
   }).join('');
   document.getElementById('wi-count').textContent='Showing '+items.length+' items';
 }
@@ -1119,7 +1396,9 @@ function fw(filter,btn){
   else if(filter==='new')f=allWI.filter(w=>isNew(w.fields));
   else if(filter==='resolved')f=allWI.filter(w=>['Resolved','Done','Completed'].includes(w.fields['System.State']));
   else if(filter==='closed')f=allWI.filter(w=>w.fields['System.State']==='Closed');
+  currentWIItems=f;
   renderWITable(f);
+  if(currentWIView!=='table')renderWIChart(currentWIView);
 }
 
 // ── SUMMARY ──
@@ -1242,24 +1521,81 @@ function renderSummary(){
 
 async function doLogin(){
   const orgRaw=document.getElementById('inp-org').value.trim().replace(/\/$/,'');
-  const pat=document.getElementById('inp-pat').value.trim();
+  const patRaw=document.getElementById('inp-pat').value.trim();
   const errEl=document.getElementById('login-error');
+  const statusEl=document.getElementById('pat-status');
   errEl.style.display='none';
-  if(!orgRaw||!pat){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and PAT.';return;}
+  statusEl.style.display='none';
+  if(!orgRaw||!patRaw){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and at least one PAT.';return;}
+
+  // Parse multiple PATs
+  const pats=patRaw.split(',').map(p=>p.trim()).filter(p=>p.length>0);
   const btn=document.getElementById('login-btn');
   btn.classList.add('loading');btn.disabled=true;
-  ORG=orgRaw;AUTH='Basic '+btoa(':'+pat);
+  ORG=orgRaw;
+  projectAuthMap={};
+
+  // Show loading status
+  statusEl.style.display='block';
+  statusEl.innerHTML='<div style="font-size:11px;color:var(--text-2)">Connecting with '+pats.length+' PAT'+(pats.length>1?'s':'')+'...</div>';
+
   try{
-    const data=await adoFetch(ORG+'/_apis/projects?api-version=7.1&$top=100');
-    allProjects=data.value||[];
-    if(!allProjects.length)throw new Error('No projects found in this organisation.');
+    // Fetch projects from all PATs in parallel
+    const results=await Promise.allSettled(pats.map(async(pat,idx)=>{
+      const auth='Basic '+btoa(':'+pat);
+      const data=await fetch(ORG+'/_apis/projects?api-version=7.1&$top=100',{headers:{Authorization:auth,'Content-Type':'application/json'}});
+      if(!data.ok)throw new Error('PAT '+(idx+1)+' failed: HTTP '+data.status);
+      const json=await data.json();
+      return{auth,projects:json.value||[]};
+    }));
+
+    // Merge projects, tag each with its auth
+    const seen=new Set();
+    allProjects=[];
+    let successCount=0,failCount=0;
+    const statusLines=[];
+
+    results.forEach((r,idx)=>{
+      if(r.status==='fulfilled'){
+        successCount++;
+        const{auth,projects}=r.value;
+        let added=0;
+        projects.forEach(p=>{
+          if(!seen.has(p.id)){
+            seen.add(p.id);
+            allProjects.push(p);
+            projectAuthMap[p.id]=auth;
+            added++;
+          }
+        });
+        statusLines.push('<span style="color:var(--green)">&#10003; PAT '+(idx+1)+': '+projects.length+' project'+(projects.length!==1?'s':'')+' loaded</span>');
+      }else{
+        failCount++;
+        statusLines.push('<span style="color:var(--red)">&#10007; PAT '+(idx+1)+': '+r.reason.message+'</span>');
+      }
+    });
+
+    if(!allProjects.length){
+      throw new Error('No projects found across any of the provided PATs.');
+    }
+
+    // Show status summary
+    statusEl.innerHTML='<div style="font-size:11px;line-height:1.8;margin-bottom:4px">'+statusLines.join('<br>')+'</div>'
+      +(failCount>0?'<div style="font-size:10px;color:var(--text-3)">'+failCount+' PAT(s) failed but continuing with '+allProjects.length+' available projects.</div>':'');
+
+    // Set default AUTH to first successful PAT
+    const firstSuccess=results.find(r=>r.status==='fulfilled');
+    if(firstSuccess)AUTH=firstSuccess.value.auth;
+
     document.getElementById('picker-org-label').textContent='· '+ORG.replace('https://dev.azure.com/','');
     document.getElementById('topbar-org').textContent=ORG.replace('https://dev.azure.com/','');
     renderProjectGrid(allProjects);
-    showScreen('picker-screen');
+
+    setTimeout(()=>showScreen('picker-screen'),failCount>0?1500:400);
   }catch(e){
     errEl.style.display='block';
     errEl.innerHTML='Connection failed: '+e.message+'<br><small>Check your org URL and PAT scopes (Work Items: Read, Project: Read).</small>';
+    statusEl.style.display='none';
     btn.classList.remove('loading');btn.disabled=false;
   }
 }
@@ -1271,6 +1607,17 @@ async function init(){
 init();
 </script>
 
+
+<!-- KPI INFO MODALS -->
+<div class="kpi-modal-overlay" id="kpi-modal-overlay" onclick="closeKpiModal(event)">
+  <div class="kpi-modal-card" id="kpi-modal-card">
+    <div class="kpi-modal-header">
+      <span class="kpi-modal-title" id="kpi-modal-title"></span>
+      <button class="kpi-modal-close" onclick="document.getElementById('kpi-modal-overlay').classList.remove('open')">&#10005;</button>
+    </div>
+    <div class="kpi-modal-body" id="kpi-modal-body"></div>
+  </div>
+</div>
 <!-- SCORE INFO MODAL -->
 <div class="modal-overlay" id="score-modal" onclick="closeScoreModal(event)">
   <div class="modal-card">
@@ -1320,5 +1667,6 @@ init();
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </body>
 </html>

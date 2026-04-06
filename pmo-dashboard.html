@@ -1432,35 +1432,52 @@ function init(){}
 // ══ MASTER DASHBOARD ══
 let masterData={}; // projectId -> {allWI, allIterations}
 
+
 async function loadMasterDashboard(){
   showScreen('master-screen');
   $('master-org').textContent=ORG.replace('https://dev.azure.com/','');
   $('master-sdot').className='sdot loading';
-  $('master-stext').textContent='Loading all projects...';
+  $('master-stext').textContent='Loading '+allProjects.length+' projects...';
+  $('master-kpis').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:1rem;color:var(--text-3)">Loading...</div>';
+  $('master-proj-grid').innerHTML='<div class="empty">Fetching data for all projects...</div>';
+  $('master-critical').innerHTML='<div class="empty">Loading...</div>';
+  $('master-leaderboard').innerHTML='<div class="empty">Loading...</div>';
+  $('master-scores').innerHTML='<div class="empty">Loading...</div>';
+  $('master-alarm').style.display='none';
 
-  // Load all projects in parallel
-  const loadResults=await Promise.allSettled(allProjects.map(async p=>{
-    const proj=p;
-    const pAuth=projectAuthMap[proj.id]||AUTH;
-    // Temporarily set AUTH for fetch
-    const savedAuth=AUTH;AUTH=pAuth;
-    const[iters,wis]=await Promise.all([loadIterations(proj.name),loadWorkItems(proj.name)]);
-    AUTH=savedAuth;
-    return{proj,iters,wis};
-  }));
+  if(!allProjects.length){
+    $('master-stext').textContent='No projects loaded';
+    $('master-proj-grid').innerHTML='<div class="empty">No projects found. Sign out and re-enter your PATs.</div>';
+    $('master-sdot').className='sdot error';
+    return;
+  }
 
   masterData={};
-  loadResults.forEach(r=>{
-    if(r.status==='fulfilled'){
-      const{proj,iters,wis}=r.value;
+
+  // Load each project one at a time, swapping AUTH safely
+  for(const proj of allProjects){
+    const pAuth=projectAuthMap[proj.id]||AUTH;
+    $('master-stext').textContent='Loading '+proj.name+'...';
+    try{
+      // Temporarily swap global AUTH for the shared fetch helpers
+      const prevAuth=AUTH;
+      AUTH=pAuth;
+      const[iters,wis]=await Promise.all([loadIterations(proj.name),loadWorkItems(proj.name)]);
+      AUTH=prevAuth;
       masterData[proj.id]={proj,allWI:wis,allIterations:iters};
+    }catch(e){
+      AUTH=AUTH; // restore
+      console.warn('Could not load '+proj.name,e.message);
+      // Still store with empty data so the card shows
+      masterData[proj.id]={proj,allWI:[],allIterations:[]};
     }
-  });
+  }
 
   $('master-sdot').className='sdot';
   $('master-stext').textContent='Live · '+allProjects.length+' projects';
   renderMasterDashboard();
 }
+
 
 function getMasterStats(d){
   const{allWI,allIterations}=d;

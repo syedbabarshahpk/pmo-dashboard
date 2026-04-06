@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1734,6 +1732,28 @@ function masterStats(d){
            curIter, sprintPct, sprintItems, active, wi, iters, score, reasons };
 }
 
+function getDeliveryPlanBadge(d){
+  const plans = d.plans || [];
+  const projName = d.proj.name;
+  const createUrl = ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
+  if(!plans.length){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
+      +'<span style="font-size:10px;font-weight:600;color:#A32D2D">DELIVERY PLAN: NOT CREATED</span>'
+      +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#A32D2D;color:#fff;border:none;cursor:pointer;font-family:inherit"'
+      +' onclick="event.stopPropagation();window.open(''+createUrl+'','_blank')">Create &#8599;</button>'
+      +'</div>';
+  }
+  const plan = plans[0];
+  const planUrl = ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+plan.id;
+  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px">'
+    +'<span style="font-size:10px;font-weight:600;color:#3B6D11">&#10003; DELIVERY PLAN</span>'
+    +'<span style="font-size:10px;color:#3B6D11;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(plan.name)+'</span>'
+    +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#0D6E6E;color:#fff;border:none;cursor:pointer;font-family:inherit"'
+    +' onclick="event.stopPropagation();window.open(''+planUrl+'','_blank')">Open &#8599;</button>'
+    +'</div>';
+}
+
+
 function renderMasterDashboard(){
   const entries = Object.values(masterData);
   if(!entries.length){
@@ -1824,23 +1844,7 @@ function renderMasterDashboard(){
         </div>
         <div class="mpc-alerts">${alerts.slice(0,2).map(a=>`<div class="mpc-alert"><div class="mpc-alert-dot" style="background:${a.c==='red'?'var(--red)':a.c==='green'?'var(--green)':'var(--amber)'}"></div>${esc(a.t)}</div>`).join('')}</div>
         <div style="font-size:10px;color:var(--text-3);margin-bottom:8px;font-style:italic;line-height:1.4">${esc(s.reasons[0])}</div>
-        ${(() => {
-          const plans = d.plans||[];
-          if(!plans.length){
-            const createUrl=ORG+'/'+encodeURIComponent(d.proj.name)+'/_boards/plans';
-            return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--red-light);border-radius:6px;margin-bottom:8px">'
-              +'<span style="font-size:10px;font-weight:600;color:var(--red)">DELIVERY PLAN: NOT CREATED</span>'
-              +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--red);color:#fff;border:none;cursor:pointer;font-family:var(--font)" onclick="event.stopPropagation();window.open(''+createUrl+'','_blank')">Create &#8599;</button>'
-              +'</div>';
-          }
-          const plan=plans[0];
-          const planUrl=ORG+'/'+encodeURIComponent(d.proj.name)+'/_boards/plans/'+plan.id;
-          return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--green-light);border-radius:6px;margin-bottom:8px">'
-            +'<span style="font-size:10px;font-weight:600;color:var(--green)">&#10003; DELIVERY PLAN</span>'
-            +'<span style="font-size:10px;color:var(--green);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(plan.name)+'</span>'
-            +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--teal);color:#fff;border:none;cursor:pointer;font-family:var(--font)" onclick="event.stopPropagation();window.open(''+planUrl+'','_blank')">Open &#8599;</button>'
-            +'</div>';
-        })()}
+        ${getDeliveryPlanBadge(d)}
         <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard →</button>
       </div>
     </div>`;

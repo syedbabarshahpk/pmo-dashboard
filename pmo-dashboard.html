@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMO Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --teal:#0D6E6E;--teal-dark:#094F4F;--teal-light:#E0F5F5;
+  --amber:#B07400;--amber-light:#FFF3D6;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --green:#3B6D11;--green-light:#EAF3DE;
+  --blue:#185FA5;--blue-light:#E6F1FB;
+  --purple:#534AB7;--purple-light:#EEEDFE;
+  --bg:#F4F3EF;--surface:#fff;
+  --border:rgba(0,0,0,0.08);--border-mid:rgba(0,0,0,0.13);
+  --text:#181816;--text-2:#5A5A56;--text-3:#9A9890;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:12px;--r-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,0.05),0 4px 12px rgba(0,0,0,0.04);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;}
+#login-screen{flex-direction:column;align-items:center;justify-content:center;}
+#picker-screen{flex-direction:column;}
+#dashboard-screen{flex-direction:column;}
+#master-screen{flex-direction:column;}
+
+/* LOGIN */
+#login-screen{align-items:center;justify-content:center;background:linear-gradient(135deg,#062f2f 0%,#0D6E6E 60%,#1c9090 100%);padding:2rem;}
+.login-card{background:var(--surface);border-radius:20px;padding:2.5rem;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.login-logo{width:48px;height:48px;background:var(--teal);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;}
+.login-logo svg{width:26px;height:26px;fill:#fff;}
+.login-card h1{font-size:21px;font-weight:600;margin-bottom:5px;}
+.login-sub{font-size:13px;color:var(--text-2);margin-bottom:1.75rem;}
+.field{margin-bottom:1rem;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+.field input,.field textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--mono);font-size:11px;color:var(--text);background:var(--bg);outline:none;transition:border-color .2s;}
+.field input{font-family:var(--font);font-size:13px;}
+.field input:focus,.field textarea:focus{border-color:var(--teal);}
+.field textarea{resize:none;line-height:1.6;}
+.login-btn{width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:var(--r-sm);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.5rem;transition:background .2s;}
+.login-btn:hover{background:var(--teal-dark);}
+.login-btn:disabled{opacity:.7;cursor:not-allowed;}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+.login-btn.loading .spin{display:block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-err{margin-top:.75rem;padding:10px 13px;background:var(--red-light);border-radius:var(--r-sm);font-size:12px;color:var(--red);display:none;line-height:1.6;}
+.login-status{margin-top:.5rem;font-size:11px;color:var(--text-2);display:none;line-height:1.8;}
+.login-note{margin-top:1rem;font-size:11px;color:var(--text-3);text-align:center;line-height:1.6;}
+
+/* PICKER */
+#picker-screen{flex-direction:column;}
+.picker-bar{background:var(--teal-dark);height:54px;display:flex;align-items:center;padding:0 2rem;gap:12px;}
+.picker-bar svg{width:20px;height:20px;fill:#fff;opacity:.8;}
+.picker-bar-title{font-size:14px;font-weight:600;color:#fff;}
+.picker-bar-org{font-size:11px;color:rgba(255,255,255,.4);}
+.picker-bar-right{margin-left:auto;display:flex;gap:8px;}
+.tb-btn{font-family:var(--font);font-size:11px;padding:5px 11px;border-radius:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);cursor:pointer;transition:background .15s;white-space:nowrap;}
+.tb-btn:hover{background:rgba(255,255,255,.18);}
+.picker-body{flex:1;padding:2.5rem 2rem;max-width:1100px;margin:0 auto;width:100%;}
+.picker-h{font-size:22px;font-weight:600;margin-bottom:6px;}
+.picker-s{font-size:13px;color:var(--text-2);margin-bottom:1.5rem;}
+.picker-search{width:100%;max-width:360px;padding:10px 14px;border:1.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--font);font-size:13px;background:var(--surface);outline:none;margin-bottom:1.5rem;display:block;transition:border-color .2s;}
+.picker-search:focus{border-color:var(--teal);}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+.proj-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.proj-card:hover{border-color:var(--teal);transform:translateY(-2px);box-shadow:var(--shadow);}
+.proj-card-av{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:14px;}
+.proj-card-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+.proj-card-meta{font-size:11px;color:var(--text-3);}
+.proj-card-arr{position:absolute;bottom:16px;right:16px;font-size:16px;color:var(--border-mid);transition:color .2s,transform .2s;}
+.proj-card:hover .proj-card-arr{color:var(--teal);transform:translateX(3px);}
+.picker-empty{text-align:center;padding:3rem;color:var(--text-3);font-size:13px;}
+.picker-err{background:var(--red-light);border:1px solid #F09595;border-radius:var(--r-sm);padding:14px;font-size:12px;color:var(--red);margin-bottom:1rem;display:none;line-height:1.6;}
+
+/* DASHBOARD */
+#dashboard-screen{flex-direction:column;}
+.topbar{background:var(--teal-dark);height:54px;display:flex;align-items:center;padding:0 1.5rem;gap:14px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.topbar-logo{width:30px;height:30px;background:rgba(255,255,255,.13);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.topbar-logo svg{width:17px;height:17px;fill:#fff;}
+.topbar-title{font-size:14px;font-weight:600;color:#fff;}
+.topbar-org{font-size:11px;color:rgba(255,255,255,.4);}
+.topbar-div{width:1px;height:22px;background:rgba(255,255,255,.15);}
+.proj-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 12px 4px 6px;}
+.proj-chip-av{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;}
+.proj-chip-name{font-size:12px;font-weight:500;color:#fff;}
+.topbar-space{flex:1;}
+.sdot{width:7px;height:7px;border-radius:50%;background:#4CAF50;flex-shrink:0;}
+.sdot.loading{background:#FFC107;animation:pulse 1s infinite;}
+.sdot.error{background:#F44336;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.status-chip{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.65);}
+
+.main{max-width:1400px;margin:0 auto;padding:1.5rem;width:100%;}
+.err-banner{background:var(--red-light);border:1px solid #F09595;border-radius:var(--r-sm);padding:12px 16px;font-size:12px;color:var(--red);margin-bottom:1.25rem;display:none;line-height:1.6;}
+.proj-hdr{display:flex;align-items:center;gap:14px;margin-bottom:1.25rem;}
+.proj-hdr-av{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;}
+.proj-hdr-name{font-size:20px;font-weight:600;}
+.proj-hdr-sub{font-size:12px;color:var(--text-2);margin-top:2px;}
+.proj-hdr-actions{margin-left:auto;display:flex;gap:8px;}
+.action-btn{font-family:var(--font);font-size:12px;padding:6px 14px;border-radius:var(--r-sm);border:1.5px solid var(--border-mid);background:var(--surface);color:var(--text-2);cursor:pointer;font-weight:500;transition:all .15s;}
+.action-btn:hover{border-color:var(--teal);color:var(--teal);}
+.action-btn.primary{background:var(--teal);color:#fff;border-color:var(--teal);}
+.action-btn.primary:hover{background:var(--teal-dark);}
+
+.slabel{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px;margin-top:18px;}
+.panel{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--border);padding:18px;margin-bottom:1rem;}
+.ptitle{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.ptitle-sub{font-size:10px;font-weight:400;color:var(--text-3);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* ALARM */
+.alarm-bar{background:var(--red-light);border:0.5px solid #F09595;border-radius:10px;padding:12px 16px;margin-bottom:4px;display:flex;align-items:flex-start;gap:12px;}
+.alarm-icon{width:28px;height:28px;border-radius:8px;background:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.alarm-icon svg{width:14px;height:14px;fill:#fff;}
+.alarm-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
+.ap{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;background:#F7C1C1;color:var(--red);cursor:pointer;transition:background .15s;}
+.ap:hover{background:#F09595;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.kpi{background:var(--surface);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);border:1px solid var(--border);position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi.red::after{background:#E24B4A;}.kpi.amber::after{background:#EF9F27;}.kpi.green::after{background:#639922;}.kpi.blue::after{background:var(--blue);}.kpi.purple::after{background:var(--purple);}.kpi.teal::after{background:var(--teal);}
+.kl{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:600;}
+.kv{font-size:24px;font-weight:600;line-height:1;margin-bottom:3px;}
+.kv.red{color:var(--red);}.kv.amber{color:var(--amber);}.kv.green{color:var(--green);}.kv.blue{color:var(--blue);}.kv.purple{color:var(--purple);}.kv.teal{color:var(--teal);}
+.ks{font-size:10px;color:var(--text-2);}
+.kpi-i{position:absolute;top:8px;right:8px;width:16px;height:16px;border-radius:50%;border:1px solid var(--border-mid);background:transparent;color:var(--text-3);font-size:9px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--font);transition:all .2s;}
+.kpi-i:hover{border-color:var(--teal);color:var(--teal);}
+
+/* BADGES */
+.badge{display:inline-block;font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;}
+.badge.red{background:var(--red-light);color:var(--red);}.badge.amber{background:var(--amber-light);color:var(--amber);}.badge.green{background:var(--green-light);color:var(--green);}.badge.blue{background:var(--blue-light);color:var(--blue);}.badge.gray{background:#F1EFE8;color:#5F5E5A;}.badge.purple{background:var(--purple-light);color:var(--purple);}
+.tp{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.tp.story{background:var(--blue-light);color:var(--blue);}.tp.bug{background:var(--red-light);color:var(--red);}.tp.task{background:var(--amber-light);color:var(--amber);}.tp.epic{background:var(--purple-light);color:var(--purple);}.tp.feature{background:var(--teal-light);color:var(--teal);}.tp.other{background:#F1EFE8;color:#5F5E5A;}
+.sp{display:inline-block;font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;}
+.sp.active{background:var(--blue-light);color:var(--blue);}.sp.new{background:#F1EFE8;color:#5F5E5A;}.sp.resolved{background:var(--green-light);color:var(--green);}.sp.closed{background:#eee;color:#999;}
+
+/* LINKED ROW */
+.linked-row{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:0.5px solid rgba(0,0,0,.05);cursor:pointer;border-radius:4px;transition:background .15s;}
+.linked-row:last-child{border-bottom:none;}
+.linked-row:hover{background:#f8f7f4;}
+.linked-row:hover .ado-btn{opacity:1;}
+.ado-btn{font-size:9px;padding:2px 7px;border-radius:20px;background:var(--blue-light);color:var(--blue);border:none;cursor:pointer;opacity:0;transition:opacity .2s;white-space:nowrap;flex-shrink:0;font-family:var(--font);font-weight:600;}
+.wi-id{font-family:var(--mono);font-size:10px;color:var(--text-3);min-width:38px;}
+.wi-title{font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wi-person{font-size:10px;color:var(--text-3);white-space:nowrap;min-width:60px;text-align:right;}
+
+/* SPRINT SELECTOR */
+.ss-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.ss-label{font-size:11px;color:var(--text-3);}
+.ss-pills{display:flex;gap:4px;flex-wrap:wrap;}
+.ss-pill{font-size:11px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border-mid);cursor:pointer;color:var(--text-2);background:var(--surface);font-family:var(--font);transition:all .15s;}
+.ss-pill:hover{border-color:var(--teal);color:var(--teal);}
+.ss-pill.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+/* SPRINT DETAIL */
+.spr-box{background:#F0F9F8;border-radius:8px;padding:14px 16px;border:0.5px solid rgba(13,110,110,.2);}
+.spr-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px;}
+.spr-name{font-size:13px;font-weight:600;color:var(--teal);}
+.spr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
+.spr-stat{background:#fff;border-radius:7px;padding:9px 10px;border:0.5px solid rgba(0,0,0,.07);}
+.spr-stat-l{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.spr-stat-v{font-size:18px;font-weight:600;color:var(--text);}
+.spr-stat-s{font-size:9px;color:var(--text-3);margin-top:1px;}
+.spr-prog{height:8px;background:rgba(0,0,0,.06);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.spr-prog-fill{height:100%;border-radius:4px;}
+.spr-prog-label{font-size:10px;color:var(--text-3);}
+
+/* TYPE BREAKDOWN */
+.type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin:10px 0 12px;}
+.type-cell{background:rgba(255,255,255,.65);border-radius:7px;padding:8px 10px;text-align:center;}
+.type-cell-val{font-size:18px;font-weight:600;color:var(--text);line-height:1;}
+.type-cell-done{font-size:10px;color:var(--text-3);margin-top:1px;}
+.type-cell-label{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:5px;}
+.type-dot{width:8px;height:8px;border-radius:3px;}
+
+/* FORECAST */
+.fc-banner{border-radius:10px;border:1.5px solid;padding:16px;}
+.fc-banner.amber{background:var(--amber-light);border-color:#FAC775;}
+.fc-banner.red{background:var(--red-light);border-color:#F09595;}
+.fc-banner.green{background:var(--green-light);border-color:#C0DD97;}
+.fc-banner.gray{background:var(--bg);border-color:var(--border-mid);}
+.fc-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
+.fc-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fc-icon svg{width:18px;height:18px;fill:#fff;}
+.fc-icon.amber{background:var(--amber);}.fc-icon.red{background:var(--red);}.fc-icon.green{background:var(--green);}.fc-icon.gray{background:#888;}
+.fc-title{font-size:13px;font-weight:600;margin-bottom:3px;}
+.fc-title.amber{color:#7A5200;}.fc-title.red{color:#791F1F;}.fc-title.green{color:#27500A;}.fc-title.gray{color:var(--text-2);}
+.fc-sub{font-size:11px;}.fc-sub.amber{color:var(--amber);}.fc-sub.red{color:var(--red);}.fc-sub.green{color:var(--green);}.fc-sub.gray{color:var(--text-3);}
+.fc-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
+.fc-stat{background:rgba(255,255,255,.7);border-radius:7px;padding:8px 10px;}
+.fc-stat-l{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.fc-stat-v{font-size:17px;font-weight:600;color:var(--text);}
+.fc-stat-s{font-size:9px;color:var(--text-3);margin-top:1px;}
+
+/* TASK CARD IN FORECAST */
+.task-card{background:rgba(255,255,255,.65);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:box-shadow .15s;}
+.task-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.task-card:last-child{margin-bottom:0;}
+.tc-hdr{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.tc-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.tc-assignee{font-size:10px;color:var(--text-2);}
+.tc-assignee strong{font-weight:500;color:var(--text);}
+
+/* QUALITY */
+.us-tabs{display:flex;gap:5px;margin-bottom:10px;}
+.us-tab{font-size:11px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border-mid);cursor:pointer;color:var(--text-2);background:var(--surface);font-family:var(--font);transition:all .15s;}
+.us-tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.us-item{border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .2s;}
+.us-item:hover{border-color:var(--teal);}
+.us-item:last-child{margin-bottom:0;}
+.us-hdr{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.us-feedback{background:#F4F3EF;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text-2);line-height:1.6;}
+.us-fb-label{font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.us-suggestion{background:var(--teal-light);border-radius:6px;padding:8px 10px;margin-top:6px;font-size:11px;color:var(--teal);line-height:1.6;cursor:pointer;transition:background .15s;}
+.us-suggestion:hover{background:#C0E8E8;}
+.us-sug-label{font-size:9px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+
+/* CLARITY */
+.clarity-item{border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;}
+.clarity-item:last-child{margin-bottom:0;}
+.ci-hdr{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.ci-comment-box{background:#F4F3EF;border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text-2);line-height:1.5;margin-top:6px;font-style:italic;}
+.ci-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:10px;color:var(--text-3);}
+
+/* HEALTH */
+.health-row{display:flex;flex-direction:column;gap:5px;padding:8px 0;border-bottom:0.5px solid rgba(0,0,0,.05);}
+.health-row:last-child{border-bottom:none;}
+.health-top{display:flex;align-items:center;gap:8px;}
+.hl{font-size:11px;color:var(--text-2);flex:1;}
+.ht{width:80px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.hf{height:100%;border-radius:3px;}
+.hp{font-size:10px;font-weight:600;min-width:32px;text-align:right;}
+.health-tip{background:#E0F5F5;border-radius:6px;padding:7px 10px;font-size:11px;color:var(--teal);line-height:1.5;}
+.health-tip-label{font-size:9px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+
+/* WORKLOAD */
+.wl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid rgba(0,0,0,.05);}
+.wl-row:last-child{border-bottom:none;}
+.av{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;flex-shrink:0;}
+.rname{font-size:11px;color:var(--text);flex:1;}
+.bar-w{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.bar-f{height:100%;border-radius:3px;}
+.rcount{font-size:11px;font-weight:600;color:var(--text);min-width:22px;text-align:right;}
+
+/* WORK ITEMS TABLE */
+.view-toggle{display:flex;gap:5px;margin-bottom:12px;}
+.vt-btn{font-size:11px;padding:5px 13px;border-radius:20px;border:0.5px solid var(--border-mid);cursor:pointer;color:var(--text-2);background:var(--surface);font-family:var(--font);transition:all .15s;}
+.vt-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.filter-select,.filter-input{font-family:var(--font);font-size:11px;padding:5px 10px;border-radius:var(--r-sm);border:0.5px solid var(--border-mid);background:var(--surface);color:var(--text);outline:none;}
+.filter-select:focus,.filter-input:focus{border-color:var(--teal);}
+.filter-input{min-width:160px;}
+.filter-clear{font-size:11px;color:var(--text-3);cursor:pointer;background:none;border:none;font-family:var(--font);text-decoration:underline;}
+.wi-scroll{max-height:420px;overflow-y:auto;}
+table.wi{width:100%;border-collapse:collapse;}
+table.wi th{text-align:left;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1.5px solid var(--border);}
+table.wi td{padding:9px 10px;font-size:12px;border-bottom:0.5px solid var(--border);vertical-align:middle;}
+table.wi tr:last-child td{border-bottom:none;}
+table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
+.wi-id-c{font-family:var(--mono);font-size:10px;color:var(--text-3);}
+.wi-title-c{max-width:240px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+.pts-b{font-family:var(--mono);font-size:10px;font-weight:500;background:var(--bg);border:0.5px solid var(--border-mid);border-radius:5px;padding:1px 6px;color:var(--text-2);}
+.wi-count-l{font-size:11px;color:var(--text-3);margin-top:8px;text-align:right;}
+.empty{text-align:center;padding:2rem;color:var(--text-3);font-size:13px;}
+
+/* SUMMARY */
+.sum-box{background:var(--teal-dark);border-radius:12px;padding:20px;}
+.sum-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px;}
+.sum-title-area .sum-title{font-size:11px;font-weight:600;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+.sum-title-area .sum-desc{font-size:11px;color:rgba(255,255,255,.35);}
+.sum-score-area{text-align:right;flex-shrink:0;}
+.sum-score{font-size:32px;font-weight:600;color:#fff;line-height:1;display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+.score-i{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.5);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);transition:all .2s;}
+.score-i:hover{border-color:#fff;color:#fff;background:rgba(255,255,255,.1);}
+.sum-score-label{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;}
+.sum-line{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:0.5px solid rgba(255,255,255,.08);}
+.sum-line:last-of-type{border-bottom:none;}
+.sum-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.sum-icon svg{width:15px;height:15px;fill:#fff;}
+.sum-icon.red{background:rgba(226,75,74,.3);}.sum-icon.amber{background:rgba(239,159,39,.25);}.sum-icon.green{background:rgba(99,153,34,.25);}.sum-icon.blue{background:rgba(24,95,165,.25);}
+.sum-body{flex:1;}
+.sum-cat{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.sum-cat.red{color:rgba(240,149,149,1);}.sum-cat.amber{color:rgba(250,199,117,1);}.sum-cat.green{color:rgba(157,225,203,1);}.sum-cat.blue{color:rgba(181,212,244,1);}
+.sum-text{font-size:12px;color:rgba(255,255,255,.8);line-height:1.65;}
+.sum-tags{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto;min-width:120px;justify-content:flex-end;}
+.sum-tag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);white-space:nowrap;}
+.sum-tag.urgent{background:rgba(226,75,74,.25);color:#F7C1C1;}
+.sum-tag.warn{background:rgba(239,159,39,.2);color:#FAC775;}
+.sum-tag.good{background:rgba(99,153,34,.2);color:#C0DD97;}
+.advice-box{background:rgba(255,255,255,.06);border-radius:9px;padding:14px 16px;margin-top:16px;border-left:3px solid #EF9F27;}
+.advice-title{font-size:10px;font-weight:600;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;}
+.advice-items{display:flex;flex-direction:column;gap:8px;}
+.advice-item{display:flex;align-items:flex-start;gap:8px;}
+.advice-num{min-width:20px;height:20px;border-radius:50%;background:rgba(239,159,39,.3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#FAC775;flex-shrink:0;margin-top:1px;}
+.advice-text{font-size:11px;color:rgba(255,255,255,.75);line-height:1.55;flex:1;}
+.advice-impact{font-size:9px;font-weight:600;padding:1px 6px;border-radius:20px;margin-left:6px;white-space:nowrap;}
+.advice-impact.high{background:rgba(99,153,34,.2);color:#C0DD97;}
+.advice-impact.med{background:rgba(239,159,39,.2);color:#FAC775;}
+.advice-impact.proc{background:rgba(24,95,165,.2);color:rgba(181,212,244,1);}
+
+/* MODAL */
+.modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center;padding:2rem;}
+.modal-ov.open{display:flex;}
+.modal-card{background:var(--surface);border-radius:16px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto;}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--border);}
+.modal-title{font-size:14px;font-weight:600;color:var(--text);}
+.modal-close{width:28px;height:28px;border-radius:8px;border:none;background:var(--bg);cursor:pointer;font-size:14px;color:var(--text-2);}
+.modal-body{padding:16px 20px;font-size:12px;color:var(--text-2);line-height:1.7;}
+.metric-row{display:flex;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);}
+.metric-row:last-child{border-bottom:none;}
+.metric-pts{min-width:44px;text-align:center;}
+.metric-pts-v{font-size:16px;font-weight:600;}
+.metric-pts-l{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;}
+.metric-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.metric-desc{font-size:11px;color:var(--text-2);line-height:1.5;}
+.score-range-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.srp{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;}
+
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.three-col{grid-template-columns:1fr 1fr;}.fc-stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:800px){.kpi-grid{grid-template-columns:repeat(2,1fr);}.two-col,.three-col{grid-template-columns:1fr;}.main{padding:1rem;}.spr-stats{grid-template-columns:1fr 1fr;}.fc-stats{grid-template-columns:1fr 1fr;}}
+
+/* QC CARD */
+.qc-card{border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
+.qc-card:last-child{margin-bottom:0;}
+.qc-card:hover{border-color:var(--teal);}
+.qc-card-top{padding:14px 16px;border-bottom:0.5px solid var(--border);background:var(--surface);}
+.qc-card-bottom{padding:12px 16px;background:#FAFAF8;}
+.qc-id-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.qc-title{font-size:20px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:8px;}
+.qc-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-2);margin-bottom:8px;}
+.qc-meta strong{font-weight:500;color:var(--text);}
+.qc-issue-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.qc-ai-section{margin-bottom:10px;}
+.qc-ai-section:last-child{margin-bottom:0;}
+.qc-ai-label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.qc-ai-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.qc-ai-feedback{font-size:12px;color:var(--text-2);line-height:1.6;background:var(--surface);border-radius:var(--r-sm);padding:9px 11px;border-left:2px solid var(--border-mid);}
+.qc-suggestion{background:#E1F5EE;border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;transition:background .15s;border-left:2px solid #0F6E56;}
+.qc-suggestion:hover{background:#C0E8E0;}
+.qc-sug-header{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.qc-sug-label{font-size:10px;font-weight:600;color:#0F6E56;text-transform:uppercase;letter-spacing:.06em;flex:1;}
+.qc-sug-copy-badge{font-size:9px;font-weight:500;padding:1px 7px;border-radius:20px;background:rgba(15,110,86,.15);color:#0F6E56;}
+.qc-sug-text{font-size:12px;color:#085041;line-height:1.55;}
+
+/* MASTER DASHBOARD */
+.master-proj-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+.master-proj-card:hover{border-color:var(--teal);box-shadow:var(--shadow);}
+.mpc-top{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid var(--border);}
+.mpc-av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.mpc-name{font-size:13px;font-weight:600;color:var(--text);}
+.mpc-sub{font-size:10px;color:var(--text-3);margin-top:2px;}
+.mpc-body{padding:14px 16px;}
+.mpc-mini-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.mpc-mk{background:var(--bg);border-radius:6px;padding:7px 8px;}
+.mpc-mk-l{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.mpc-mk-v{font-size:16px;font-weight:600;color:var(--text);}
+.mpc-spr-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.mpc-spr-label{font-size:10px;color:var(--text-2);width:54px;flex-shrink:0;}
+.mpc-spr-bar{flex:1;height:7px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.mpc-spr-fill{height:100%;border-radius:4px;}
+.mpc-spr-pct{font-size:10px;font-weight:600;min-width:28px;text-align:right;}
+.mpc-alerts{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.mpc-alert{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--text);line-height:1.4;}
+.mpc-alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.mpc-view-btn{width:100%;padding:7px;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--font);font-size:11px;color:var(--text-2);cursor:pointer;transition:all .15s;}
+.mpc-view-btn:hover{border-color:var(--teal);color:var(--teal);}
+.leader-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,.05);}
+.leader-row:last-child{border-bottom:none;}
+.score-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.score-bar-row:last-child{margin-bottom:0;}
+
+/* DELIVERY PLAN */
+.delivery-plan-bar{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;margin-bottom:4px;}
+.dp-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dp-icon svg{width:18px;height:18px;fill:#fff;}
+.dp-icon.green{background:var(--green);}.dp-icon.gray{background:#888;}.dp-icon.amber{background:var(--amber);}
+.dp-title{font-size:13px;font-weight:600;color:var(--text);}
+.dp-sub{font-size:11px;color:var(--text-3);margin-top:2px;}
+.dp-link{margin-left:auto;display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.dp-open-btn{font-family:var(--font);font-size:12px;padding:7px 16px;border-radius:var(--r-sm);background:var(--teal);color:#fff;border:none;cursor:pointer;font-weight:500;transition:background .15s;white-space:nowrap;}
+.dp-open-btn:hover{background:var(--teal-dark);}
+.dp-not-created{font-family:var(--font);font-size:12px;padding:7px 16px;border-radius:var(--r-sm);background:var(--red-light);color:var(--red);border:1px solid #F09595;cursor:pointer;font-weight:500;white-space:nowrap;}
+.dp-plan-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.dp-plan-chip{display:flex;align-items:center;gap:6px;background:#F0F9F8;border:0.5px solid rgba(13,110,110,.2);border-radius:20px;padding:5px 12px;cursor:pointer;transition:background .15s;}
+.dp-plan-chip:hover{background:#C0E8E0;}
+.dp-plan-chip-name{font-size:11px;font-weight:500;color:var(--teal);}
+.dp-plan-chip-icon{font-size:10px;color:var(--teal);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></div>
+    <h1>PMO Command Center</h1>
+    <p class="login-sub">Sign in with your Azure DevOps credentials.</p>
+    <div class="field">
+      <label>Organisation URL</label>
+      <input type="text" id="inp-org" placeholder="https://dev.azure.com/your-org" value="https://dev.azure.com/verokeinc">
+    </div>
+    <div class="field">
+      <label>Personal Access Token(s)</label>
+      <textarea id="inp-pat" rows="3" placeholder=""></textarea>
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
+      <div class="spin"></div>
+      <span id="login-btn-text">Connect &amp; Load Projects &#8594;</span>
+    </button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-status" id="login-status"></div>
+    <p class="login-note">PATs are used only in your browser and never stored anywhere.</p>
+  </div>
+</div>
+
+<!-- PICKER -->
+<div id="picker-screen" class="screen">
+  <div class="picker-bar">
+    <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    <span class="picker-bar-title">PMO Command Center</span>
+    <span class="picker-bar-org" id="picker-org"></span>
+    <div class="picker-bar-right"><button class="tb-btn" onclick="doLogout()">Sign out</button></div>
+  </div>
+  <div class="picker-body">
+    <div class="picker-h">Select a project</div>
+    <div class="picker-s" id="picker-sub">Choose the project to view its dashboard.</div>
+    <input class="picker-search" type="text" placeholder="Search projects..." oninput="filterProjects(this.value)">
+    <div class="picker-err" id="picker-err"></div>
+    <div class="proj-grid" id="proj-grid"><div class="picker-empty">Loading projects...</div></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-screen" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></div>
+    <div><div class="topbar-title">PMO Command Center</div><div class="topbar-org" id="topbar-org"></div></div>
+    <div class="topbar-div"></div>
+    <div class="proj-chip"><div class="proj-chip-av" id="chip-av"></div><span class="proj-chip-name" id="chip-name"></span></div>
+    <div class="topbar-space"></div>
+    <div class="status-chip"><span class="sdot loading" id="sdot"></span><span id="stext">Loading...</span></div>
+    <button class="tb-btn" onclick="loadDashboard(currentProject)">&#8635; Refresh</button>
+    <button class="tb-btn" id="back-to-master-btn" onclick="showScreen('master-screen')" style="display:none">&#8678; Overview</button>
+    <button class="tb-btn" onclick="goToPicker()">&#8859; Projects</button>
+    <button class="tb-btn" onclick="doLogout()">Sign out</button>
+  </div>
+  <div class="main">
+    <div class="err-banner" id="err-banner"></div>
+    <div class="proj-hdr">
+      <div class="proj-hdr-av" id="ph-av"></div>
+      <div><div class="proj-hdr-name" id="ph-name"></div><div class="proj-hdr-sub" id="ph-sub"></div></div>
+      <div class="proj-hdr-actions">
+        <button class="action-btn primary" onclick="goToPicker()">&#8859; Change Project</button>
+        <button class="action-btn" onclick="loadDashboard(currentProject)">&#8635; Refresh</button>
+      </div>
+    </div>
+    <div class="alarm-bar" id="alarm-bar" style="display:none">
+      <div class="alarm-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:#791F1F" id="alarm-title"></div>
+        <div class="alarm-pills" id="alarm-pills"></div>
+      </div>
+    </div>
+    <div class="slabel" style="margin-top:12px">Project health</div>
+    <div class="kpi-grid">
+      <div class="kpi red"><button class="kpi-i" onclick="showModal('Delayed Items','Work items past their sprint end date that are not resolved. Each delayed item represents a broken sprint commitment and increases carryover debt. Industry benchmark: 0 delayed items. Above 5 is a critical delivery risk.')">i</button><div class="kl">Delayed items</div><div class="kv red" id="k-delayed">-</div><div class="ks">past sprint end</div></div>
+      <div class="kpi amber"><button class="kpi-i" onclick="showModal('Stale Items (7+ days)','Active items with no update for 7+ days. Signals blocked work or a team not keeping ADO current. The 7-day threshold aligns with the Agile principle that no active item should go a full sprint without a visible update.')">i</button><div class="kl">Stale 7+ days</div><div class="kv amber" id="k-stale">-</div><div class="ks">no activity</div></div>
+      <div class="kpi amber"><button class="kpi-i" onclick="showModal('Unassigned Items','Active items with no owner. Unowned work has no accountability — nobody is responsible for completing it. Industry standard: 0 unassigned items in an active sprint.')">i</button><div class="kl">Unassigned</div><div class="kv amber" id="k-unassigned">-</div><div class="ks">no owner</div></div>
+      <div class="kpi red"><button class="kpi-i" onclick="showModal('No Reporter','Items with no Created By field. Without a reporter there is no accountability trail — nobody knows who requested the work, making it impossible to clarify requirements.')">i</button><div class="kl">No reporter</div><div class="kv red" id="k-noreporter">-</div><div class="ks">missing accountability</div></div>
+      <div class="kpi green"><button class="kpi-i" onclick="showModal('Completion Rate','Percentage of all work items in this project that are resolved, closed, or done. A healthy project shows this increasing sprint-over-sprint at a rate matching team velocity.')">i</button><div class="kl">Completion</div><div class="kv green" id="k-completion">-</div><div class="ks" id="k-completion-s">done</div></div>
+      <div class="kpi purple" id="kpi-quality"><button class="kpi-i" onclick="showModal('User Story Quality','Percentage of user stories with acceptance criteria. Without acceptance criteria developers cannot determine when a story is done, PMs cannot sign off, and QA has no test basis. Industry standard: 100% of stories entering a sprint must have acceptance criteria.')">i</button><div class="kl">US quality</div><div class="kv purple" id="k-quality">-</div><div class="ks">have acceptance criteria</div></div>
+    </div>
+    <div class="slabel" id="sprint-tl-label">Sprint delivery timeline</div>
+    <div class="panel">
+      <div class="ss-row">
+        <span class="ss-label">Sprint:</span>
+        <div class="ss-pills" id="ss-pills"></div>
+        <span style="font-size:10px;color:var(--text-3);font-style:italic">Forecast updates to match</span>
+      </div>
+      <div id="sprint-detail"></div>
+    </div>
+    <div class="slabel">Sprint delivery forecast <span id="fc-label" style="font-size:10px;font-weight:400;color:var(--text-3);text-transform:none;letter-spacing:0"></span></div>
+    <div id="forecast-area"></div>
+    <div class="slabel">Items needing immediate action</div>
+    <div class="two-col">
+      <div class="panel">
+        <div id="delayed-anchor" style="scroll-margin-top:70px"></div>
+        <div class="ptitle">Delayed tasks <span class="ptitle-sub" id="delayed-count"></span></div>
+        <div id="delayed-list"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div id="stale-anchor" style="scroll-margin-top:70px"></div>
+        <div class="ptitle">Stale in-progress tasks <span class="ptitle-sub">7+ days no update</span></div>
+        <div id="stale-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+    <div class="slabel">User story quality &amp; clarity</div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="ptitle">Quality flags <span class="ptitle-sub">click for AI feedback &amp; fix</span></div>
+        <div class="us-tabs">
+          <button class="us-tab active" onclick="setQualityTab('all',this)">All</button>
+          <button class="us-tab" onclick="setQualityTab('User Story',this)">User Stories</button>
+          <button class="us-tab" onclick="setQualityTab('Task',this)">Tasks</button>
+        </div>
+        <div id="quality-list"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Unanswered comments <span class="ptitle-sub">may be blocking developers</span></div>
+        <div class="us-tabs">
+          <button class="us-tab active" onclick="setClarityTab('all',this)">All</button>
+          <button class="us-tab" onclick="setClarityTab('User Story',this)">User Stories</button>
+          <button class="us-tab" onclick="setClarityTab('Task',this)">Tasks</button>
+        </div>
+        <div id="clarity-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+    <div class="slabel">Resources &amp; delivery health</div>
+    <div class="three-col">
+      <div class="panel">
+        <div id="workload-anchor" style="scroll-margin-top:70px"></div>
+        <div class="ptitle">Workload — active items</div>
+        <div id="workload-list"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Top story creators</div>
+        <div id="creators-list"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Delivery health checks</div>
+        <div id="health-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+    <div class="slabel">All work items</div>
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div class="view-toggle">
+          <button class="vt-btn active" onclick="switchView('table',this)">Table</button>
+          <button class="vt-btn" onclick="switchView('pie',this)">By type</button>
+          <button class="vt-btn" onclick="switchView('bar',this)">By state</button>
+        </div>
+        <div class="filter-bar">
+          <select class="filter-select" id="f-type" onchange="applyFilters()"><option value="">All types</option><option>User Story</option><option>Task</option><option>Bug</option><option>Epic</option><option>Feature</option></select>
+          <select class="filter-select" id="f-state" onchange="applyFilters()"><option value="">All states</option><option>New</option><option>Active</option><option>Resolved</option><option>Closed</option></select>
+          <select class="filter-select" id="f-sprint" onchange="applyFilters()"><option value="">All sprints</option></select>
+          <input class="filter-input" id="f-text" placeholder="Search title..." oninput="applyFilters()">
+          <button class="filter-clear" onclick="clearFilters()">Clear</button>
+        </div>
+      </div>
+      <div id="chart-area" style="display:none"><canvas id="wi-chart" style="max-height:300px"></canvas></div>
+      <div id="table-area">
+        <div class="wi-scroll">
+          <table class="wi">
+            <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>State</th><th>Pts</th><th>Sprint</th><th>Assigned To</th><th>Created By</th></tr></thead>
+            <tbody id="wi-tbody"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="wi-count-l" id="wi-count"></div>
+    </div>
+    <div class="slabel">Delivery plan</div>
+    <div id="delivery-plan-section"><div class="delivery-plan-bar"><div class="dp-icon gray"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg></div><div><div class="dp-title">Loading delivery plans...</div></div></div></div>
+    <div class="slabel">Project intelligence summary</div>
+    <div class="sum-box">
+      <div class="sum-hdr">
+        <div class="sum-title-area">
+          <div class="sum-title">Project assessment — <span id="sum-proj"></span></div>
+          <div class="sum-desc" id="sum-desc"></div>
+        </div>
+        <div class="sum-score-area">
+          <div class="sum-score"><span id="sum-score">-</span><button class="score-i" onclick="showScoreModal()">i</button></div>
+          <div class="sum-score-label" id="sum-score-label">Health score</div>
+        </div>
+      </div>
+      <div id="sum-lines"></div>
+      <div class="advice-box">
+        <div class="advice-title">Quick fix advice</div>
+        <div class="advice-items" id="advice-items"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal-ov" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-card">
+    <div class="modal-hdr">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" onclick="document.getElementById('modal-ov').classList.remove('open')">&#10005;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// STATE
+let ORG='', AUTH='', currentProject='', allProjects=[], allWI=[], allIterations=[];
+let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='table', currentWI=[];
+let qualityTabFilter='all', clarityTabFilter='all';
+let isFurqanMode=false, masterData={};
+
+const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];
+const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Other':'#888780'};
+
+function $(id){return document.getElementById(id);}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function initials(n){return(n||'?').split(/[\s\-_]+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function color(i){return COLORS[i%COLORS.length];}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setStatus(c,t){$('sdot').className='sdot '+c;$('stext').textContent=t;}
+function showErr(m){const b=$('err-banner');b.style.display='block';b.innerHTML=m;}
+function hideErr(){$('err-banner').style.display='none';}
+function daysSince(d){if(!d)return 999;return Math.floor((Date.now()-new Date(d))/(86400000));}
+function isDone(f){return['Resolved','Closed','Done','Completed'].includes(f['System.State']);}
+function isActive(f){return['Active','In Progress','Doing','Committed'].includes(f['System.State']);}
+function isNew(f){return['New','To Do','Backlog','Proposed','Ready'].includes(f['System.State']);}
+function isStory(f){return(f['System.WorkItemType']||'').toLowerCase().includes('story');}
+function getAssignee(f){return f['System.AssignedTo']?.displayName||null;}
+function getCreator(f){return f['System.CreatedBy']?.displayName||'Unknown';}
+function getIterShort(f){return(f['System.IterationPath']||'').split('\\').pop()||'';}
+function adoUrl(id){return ORG+'/'+encodeURIComponent(currentProject)+'/_workitems/edit/'+id;}
+function openAdo(id,e){if(e)e.stopPropagation();window.open(adoUrl(id),'_blank');}
+function showModal(title,body){$('modal-title').textContent=title;$('modal-body').innerHTML='<p>'+body+'</p>';$('modal-ov').classList.add('open');}
+function tcls(t){if(!t)return'other';const l=t.toLowerCase();if(l.includes('story'))return'story';if(l.includes('bug'))return'bug';if(l.includes('task'))return'task';if(l.includes('epic'))return'epic';if(l.includes('feature'))return'feature';return'other';}
+function scls(s){if(!s)return'new';const l=s.toLowerCase();if(['active','in progress','doing','committed'].includes(l))return'active';if(['resolved','closed','done','completed'].includes(l))return'resolved';if(l==='closed')return'closed';return'new';}
+
+async function adoFetch(url,opts={}){
+  const r=await fetch(url,{...opts,headers:{Authorization:AUTH,'Content-Type':'application/json',...(opts.headers||{})}});
+  if(!r.ok){const t=await r.text();throw new Error('HTTP '+r.status+': '+t.slice(0,200));}
+  return r.json();
+}
+
+async function doLogin(){
+  const orgRaw=$('inp-org').value.trim().replace(/\/$/,'');
+  const patRaw=$('inp-pat').value.trim();
+  const errEl=$('login-err');
+  errEl.style.display='none';
+  $('login-status').style.display='none';
+  if(!orgRaw||!patRaw){errEl.style.display='block';errEl.textContent='Please enter your organisation URL and PAT.';return;}
+  const pats=patRaw.split(',').map(p=>p.trim()).filter(Boolean);
+  isFurqanMode=pats.length>1;
+  const btn=$('login-btn');
+  btn.classList.add('loading');btn.disabled=true;
+  $('login-btn-text').textContent='Connecting...';
+  ORG=orgRaw;projectAuthMap={};
+  try{
+    const results=await Promise.allSettled(pats.map(async(pat,idx)=>{
+      const auth='Basic '+btoa(':'+pat);
+      const r=await fetch(ORG+'/_apis/projects?api-version=7.1&$top=100',{headers:{Authorization:auth,'Content-Type':'application/json'}});
+      if(!r.ok)throw new Error('PAT '+(idx+1)+' failed (HTTP '+r.status+')');
+      const j=await r.json();
+      return{auth,projects:j.value||[]};
+    }));
+    const seen=new Set();allProjects=[];
+    const lines=[];
+    results.forEach((r,idx)=>{
+      if(r.status==='fulfilled'){
+        const{auth,projects}=r.value;
+        projects.forEach(p=>{if(!seen.has(p.id)){seen.add(p.id);allProjects.push(p);projectAuthMap[p.id]=auth;AUTH=auth;}});
+        lines.push('<span style="color:var(--green)">&#10003; PAT '+(idx+1)+': '+projects.length+' projects</span>');
+      }else{
+        lines.push('<span style="color:var(--red)">&#10007; PAT '+(idx+1)+': '+r.reason.message+'</span>');
+      }
+    });
+    if(!allProjects.length)throw new Error('No projects found. Check PAT scopes (Project: Read required).');
+    $('login-status').style.display='block';
+    $('login-status').innerHTML=lines.join(' &nbsp;&middot;&nbsp; ');
+    $('topbar-org').textContent=ORG.replace('https://dev.azure.com/','');
+    if(isFurqanMode){
+      loadMasterDashboard();
+    }else{
+      $('picker-org').textContent='&middot; '+ORG.replace('https://dev.azure.com/','');
+      $('picker-sub').textContent=allProjects.length+' project'+(allProjects.length!==1?'s':'')+' loaded. Click one to open its dashboard.';
+      renderProjectGrid(allProjects);
+      showScreen('picker-screen');
+    }
+  }catch(e){
+    errEl.style.display='block';
+    errEl.innerHTML='Connection failed: '+e.message+'<br><small>Check your org URL and PAT scopes.</small>';
+    btn.classList.remove('loading');btn.disabled=false;
+    $('login-btn-text').textContent='Connect & Load Projects \u2192';
+  }
+}
+
+function doLogout(){
+  ORG='';AUTH='';allWI=[];allIterations=[];currentProject='';
+  allProjects=[];selectedSprintIdx=null;projectAuthMap={};
+  masterData={};isFurqanMode=false;
+  $('inp-pat').value='';
+  $('login-err').style.display='none';
+  $('login-status').style.display='none';
+  $('login-btn').classList.remove('loading');
+  $('login-btn').disabled=false;
+  $('login-btn-text').textContent='Connect & Load Projects \u2192';
+  showScreen('login-screen');
+}
+
+function renderProjectGrid(projects){
+  const grid=$('proj-grid');
+  if(!projects.length){grid.innerHTML='<div class="picker-empty">No matching projects.</div>';return;}
+  grid.innerHTML=projects.map(p=>{
+    const i=allProjects.indexOf(p);const col=color(i);
+    return '<div class="proj-card" onclick="selectProject(\''+esc(p.name)+"',"+i+')">'
+      +'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+col+';border-radius:3px 3px 0 0"></div>'
+      +'<div class="proj-card-av" style="background:'+col+'">'+initials(p.name)+'</div>'
+      +'<div class="proj-card-name">'+esc(p.name)+'</div>'
+      +'<div class="proj-card-meta">'+(p.projectType||'Azure DevOps Project')+'</div>'
+      +'<div class="proj-card-arr">&#8594;</div></div>';
+  }).join('');
+}
+
+function filterProjects(q){renderProjectGrid(allProjects.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())));}
+function goToPicker(){showScreen('picker-screen');}
+
+function selectProject(name,idx){
+  currentProject=name;
+  const proj=allProjects.find(p=>p.name===name);
+  if(proj&&projectAuthMap[proj.id])AUTH=projectAuthMap[proj.id];
+  const col=color(idx);
+  ['chip-av','ph-av'].forEach(id=>{$(id).style.background=col;$(id).textContent=initials(name);});
+  $('chip-name').textContent=name;
+  $('ph-name').textContent=name;
+  $('ph-sub').textContent='Azure DevOps \u00b7 '+ORG.replace('https://dev.azure.com/','');
+  if($('back-to-master-btn'))$('back-to-master-btn').style.display=isFurqanMode?'':'none';
+  showScreen('dashboard-screen');
+  loadDashboard(name);
+}
+
+async function loadDashboard(project){
+  setStatus('loading','Loading '+project+'...');
+  hideErr();selectedSprintIdx=null;
+  try{
+    const[iterations,workItems]=await Promise.all([loadIterations(project),loadWorkItems(project)]);
+    allIterations=iterations;allWI=workItems;currentWI=workItems;
+    renderAll();
+    setStatus('','Live \u00b7 '+project+' \u00b7 '+workItems.length+' items');
+    $('sdot').className='sdot';
+  }catch(e){
+    setStatus('error','Error');
+    showErr('Failed to load <strong>'+esc(project)+'</strong>: '+e.message);
+  }
+}
+
+async function loadIterations(p){
+  try{const d=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/work/teamsettings/iterations?api-version=7.1');return d.value||[];}
+  catch{return[];}
+}
+
+async function loadWorkItems(p){
+  const wiql={query:"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject]='"+p.replace(/'/g,"\\'")+"' ORDER BY [System.ChangedDate] DESC"};
+  const wr=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/wiql?api-version=7.1&$top=500',{method:'POST',body:JSON.stringify(wiql)});
+  const ids=(wr.workItems||[]).map(w=>w.id).slice(0,500);
+  if(!ids.length)return[];
+  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
+  let all=[];
+  for(let i=0;i<ids.length;i+=200){
+    const d=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/workitems?ids='+ids.slice(i,i+200).join(',')+'&fields='+fields+'&api-version=7.1');
+    all=all.concat(d.value||[]);
+  }
+  return all;
+}
+
+function renderAll(){
+  renderAlarm();renderKPIs();renderSprintTimeline();
+  renderDelayedStale();renderQuality();renderClarity();
+  renderWorkload();renderHealth();renderWITable(allWI);
+  populateSprintFilter();loadDeliveryPlans(currentProject);renderSummary();
+}
+
+function getDelayed(){
+  const now=new Date();
+  return allWI.filter(w=>{
+    if(isDone(w.fields))return false;
+    const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
+    if(!iter?.attributes?.finishDate)return false;
+    return new Date(iter.attributes.finishDate)<now;
+  });
+}
+function getStale(){return allWI.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=7);}
+function getSprintItems(name){return allWI.filter(w=>getIterShort(w.fields)===name);}
+
+function renderAlarm(){
+  const delayed=getDelayed().filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const stale=getStale().filter(w=>(w.fields['System.WorkItemType']||'')==='Task'&&isActive(w.fields));
+  const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
+  const sections=[
+    {count:delayed.length,label:'delayed tasks',anchor:'delayed-anchor'},
+    {count:stale.length,label:'stale in-progress tasks',anchor:'stale-anchor'},
+    {count:unassigned.length,label:'unassigned items',anchor:'workload-anchor'},
+  ].filter(s=>s.count>0);
+  const bar=$('alarm-bar');
+  if(!sections.length){bar.style.display='none';return;}
+  bar.style.display='flex';
+  $('alarm-title').textContent=sections.length+' issue'+(sections.length>1?'s':'')+' require attention \u2014 click to review';
+  $('alarm-pills').innerHTML=sections.map(s=>'<span class="ap" onclick="document.getElementById(\''+s.anchor+'\').scrollIntoView({behavior:\'smooth\'})">'+s.count+' '+s.label+' &#8594;</span>').join('');
+}
+
+function renderKPIs(){
+  const delayed=getDelayed().length;const stale=getStale().length;
+  const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
+  const noReporter=allWI.filter(w=>!w.fields['System.CreatedBy']).length;
+  const done=allWI.filter(w=>isDone(w.fields)).length;const total=allWI.length||1;
+  const pct=Math.round(done/total*100);
+  const stories=allWI.filter(w=>isStory(w.fields));
+  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
+  const qPct=stories.length>0?Math.round(withAC/stories.length*100):100;
+  $('k-delayed').textContent=delayed;$('k-stale').textContent=stale;$('k-unassigned').textContent=unassigned;
+  $('k-noreporter').textContent=noReporter;$('k-completion').textContent=pct+'%';
+  $('k-completion-s').textContent=done+' of '+total+' done';$('k-quality').textContent=qPct+'%';
+  const qc=$('kpi-quality');
+  qc.className='kpi '+(qPct<50?'red':qPct<75?'amber':'green');
+  $('k-quality').className='kv '+(qPct<50?'red':qPct<75?'amber':'green');
+}
+
+function renderSprintTimeline(){
+  if(!allIterations.length){
+    $('ss-pills').innerHTML='<span style="font-size:11px;color:var(--text-3)">No sprints configured</span>';
+    $('sprint-detail').innerHTML='<div class="empty">Set up iterations in ADO \u2192 Project Settings \u2192 Boards \u2192 Iterations.</div>';
+    return;
+  }
+  const now=new Date();
+  let defIdx=allIterations.findIndex(it=>{
+    const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+    return s&&e&&now>=s&&now<=e;
+  });
+  if(defIdx<0)defIdx=allIterations.length-1;
+  if(selectedSprintIdx===null)selectedSprintIdx=defIdx;
+  $('ss-pills').innerHTML=allIterations.map((it,i)=>`<span class="ss-pill${i===selectedSprintIdx?' active':''}" onclick="selectSprint(${i})">${esc(it.name)}</span>`).join('')
+    +'<span class="ss-pill'+(selectedSprintIdx===-1?' active':'')+'" onclick="selectSprint(-1)">All</span>';
+  renderSprintDetail();
+}
+
+function selectSprint(idx){
+  selectedSprintIdx=idx;
+  document.querySelectorAll('.ss-pill').forEach((p,i)=>{
+    const isAll=idx===-1&&i===allIterations.length;
+    p.classList.toggle('active',i===idx||isAll);
+  });
+  renderSprintDetail();renderForecast();
+}
+
+function renderSprintDetail(){
+  const area=$('sprint-detail');const now=new Date();
+  const fmt=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'?';
+  if(selectedSprintIdx===-1){
+    area.innerHTML=allIterations.map(it=>{
+      const s=it.attributes?.startDate,e=it.attributes?.finishDate;
+      const start=s?new Date(s):null,end=e?new Date(e):null;
+      let cls='upcoming';
+      if(start&&end){if(now>=start&&now<=end)cls='active';else if(now>end)cls='done';}
+      const items=getSprintItems(it.name);
+      const doneCount=items.filter(w=>isDone(w.fields)).length;
+      const pct=items.length>0?Math.round(doneCount/items.length*100):0;
+      const barCol=cls==='done'?(pct>=80?'var(--green)':'var(--red)'):cls==='active'?'var(--blue)':'var(--border-mid)';
+      const bc=cls==='done'?(pct>=80?'green':'red'):cls==='active'?'blue':'gray';
+      return '<div class="linked-row"><span style="font-size:11px;font-weight:500;color:var(--text);min-width:90px">'+esc(it.name)+'</span>'
+        +'<div style="flex:1;margin:0 10px"><div style="height:14px;background:var(--bg);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+barCol+';border-radius:3px"></div></div></div>'
+        +'<span style="font-size:10px;color:var(--text-3);min-width:110px">'+fmt(s)+' \u2013 '+fmt(e)+'</span>'
+        +'<span style="font-size:10px;color:var(--text-3);min-width:50px;text-align:right">'+items.length+' items</span>'
+        +'<span class="badge '+bc+'" style="margin-left:6px">'+(cls==='active'?'Active':cls==='done'?'Done':'Planned')+'</span></div>';
+    }).join('');
+    $('fc-label').textContent='';
+    $('forecast-area').innerHTML='<div class="panel"><div class="empty">Select a single sprint to see its forecast.</div></div>';
+    return;
+  }
+  const it=allIterations[selectedSprintIdx];if(!it)return;
+  const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
+  const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+  let spStatus='Planned',bc='gray';
+  if(s&&e){if(now>=s&&now<=e){spStatus='Active';bc='blue';}else if(now>e){spStatus='Completed';bc='green';}}
+  const items=getSprintItems(it.name);
+  const doneItems=items.filter(w=>isDone(w.fields));
+  const pct=items.length>0?Math.round(doneItems.length/items.length*100):0;
+  const totalPts=items.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+  const donePts=doneItems.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+  const daysLeft=e&&now<e?Math.max(0,Math.round((e-now)/86400000)):0;
+  const daysTotal=s&&e?Math.max(1,Math.round((e-s)/86400000)):10;
+  const blockedItems=items.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=3).length;
+  const tfItems=items.filter(w=>['Task','Feature'].includes(w.fields['System.WorkItemType']));
+  const typeBreak=buildTypeBreakdown(tfItems.length?tfItems:items);
+  area.innerHTML=`<div class="spr-box">
+    <div class="spr-hdr"><span class="spr-name">${esc(it.name)}</span>
+    <div style="display:flex;gap:6px"><span class="badge ${bc}">${spStatus}</span><span class="badge gray">${fmt(s)} \u2013 ${fmt(e)}</span>${daysLeft>0?'<span class="badge blue">'+daysLeft+'d left</span>':''}</div></div>
+    <div class="spr-stats">
+      <div class="spr-stat"><div class="spr-stat-l">Committed</div><div class="spr-stat-v">${items.length}</div><div class="spr-stat-s">${totalPts} pts</div></div>
+      <div class="spr-stat"><div class="spr-stat-l">Done</div><div class="spr-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="spr-stat-s">${donePts} pts \u00b7 ${pct}%</div></div>
+      <div class="spr-stat"><div class="spr-stat-l">Remaining</div><div class="spr-stat-v" style="color:var(--amber)">${items.length-doneItems.length}</div><div class="spr-stat-s">${totalPts-donePts} pts</div></div>
+      <div class="spr-stat"><div class="spr-stat-l">Stale/Blocked</div><div class="spr-stat-v" style="color:var(--red)">${blockedItems}</div><div class="spr-stat-s">3+ days silent</div></div>
+    </div>
+    <div class="spr-prog"><div class="spr-prog-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--blue)':'var(--red)'}"></div></div>
+    <div class="spr-prog-label">${pct}% complete \u00b7 ${items.length-doneItems.length} items remaining${daysLeft>0?' \u00b7 '+daysLeft+' days left':''}</div>
+    ${typeBreak}</div>`;
+  $('fc-label').textContent='\u2014 '+it.name;
+  renderForecast();
+}
+
+function buildTypeBreakdown(items){
+  if(!items||!items.length)return'';
+  const counts={};
+  items.forEach(w=>{const t=w.fields['System.WorkItemType']||'Other';if(!counts[t])counts[t]={total:0,done:0};counts[t].total++;if(isDone(w.fields))counts[t].done++;});
+  const cells=Object.entries(counts).sort((a,b)=>b[1].total-a[1].total).map(([t,v])=>{
+    const col=TYPE_COLORS[t]||'#888';const pct=Math.round(v.done/v.total*100);
+    return`<div class="type-cell"><div class="type-cell-val">${v.total}</div><div class="type-cell-done">${v.done} done \u00b7 ${pct}%</div><div class="type-cell-label"><div class="type-dot" style="background:${col}"></div><span class="tp ${tcls(t)}">${t}</span></div></div>`;
+  }).join('');
+  return`<div style="margin-top:10px"><div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Items by type</div><div class="type-grid">${cells}</div></div>`;
+}
+
+function renderForecast(){
+  if(selectedSprintIdx===-1){$('forecast-area').innerHTML='<div class="panel"><div class="empty">Select a single sprint above.</div></div>';return;}
+  const it=allIterations[selectedSprintIdx];if(!it)return;
+  const now=new Date();
+  const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
+  const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+  const allSprintItems=getSprintItems(it.name);
+  const taskItems=allSprintItems.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const doneItems=allSprintItems.filter(w=>isDone(w.fields));
+  const donePts=doneItems.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+  const totalPts=allSprintItems.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+  const pct=allSprintItems.length>0?Math.round(doneItems.length/allSprintItems.length*100):0;
+  const daysLeft=e&&now<e?Math.max(1,Math.round((e-now)/86400000)):0;
+  const daysTotal=s&&e?Math.max(1,Math.round((e-s)/86400000)):10;
+  const daysElapsed=s&&now>s?Math.min(daysTotal,Math.round((now-s)/86400000)):0;
+  const remPts=totalPts-donePts;
+  let histV=0,prevCount=0;
+  for(let i=0;i<selectedSprintIdx;i++){
+    const pit=allIterations[i];const pitems=getSprintItems(pit.name);
+    const ppts=pitems.filter(w=>isDone(w.fields)).reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+    if(ppts>0){histV+=ppts;prevCount++;}
+  }
+  const avgV=prevCount>0?Math.round(histV/prevCount):0;
+  const neededPerDay=daysLeft>0?Math.round(remPts/daysLeft*10)/10:0;
+  const currentRate=daysElapsed>0?Math.round(donePts/daysElapsed*10)/10:0;
+  const isPast=e&&now>e;
+  if(isPast){
+    const fp=Math.round(doneItems.length/Math.max(1,allSprintItems.length)*100);
+    const fc=fp>=80?'green':'red';
+    $('forecast-area').innerHTML=`<div class="fc-banner ${fc}">
+      <div class="fc-top"><div class="fc-icon ${fc}"><svg viewBox="0 0 24 24"><path d="${fp>=80?'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z':'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'}"/></svg></div>
+      <div><div class="fc-title ${fc}">Sprint completed \u2014 ${fp>=80?'Goal met ('+fp+'%)':'Goal missed ('+fp+'%)'}</div>
+      <div class="fc-sub ${fc}">${doneItems.length} of ${allSprintItems.length} items \u00b7 ${donePts} of ${totalPts} pts delivered</div></div></div>
+      <div class="fc-stats">
+        <div class="fc-stat"><div class="fc-stat-l">Committed</div><div class="fc-stat-v">${allSprintItems.length}</div><div class="fc-stat-s">${totalPts} pts</div></div>
+        <div class="fc-stat"><div class="fc-stat-l">Delivered</div><div class="fc-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="fc-stat-s">${donePts} pts</div></div>
+        <div class="fc-stat"><div class="fc-stat-l">Carried over</div><div class="fc-stat-v" style="color:var(--red)">${allSprintItems.length-doneItems.length}</div><div class="fc-stat-s">${remPts} pts</div></div>
+        <div class="fc-stat"><div class="fc-stat-l">Completion</div><div class="fc-stat-v" style="color:${fp>=80?'var(--green)':'var(--red)'}">${fp}%</div></div>
+        <div class="fc-stat"><div class="fc-stat-l">Tasks total</div><div class="fc-stat-v">${taskItems.length}</div><div class="fc-stat-s">in this sprint</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:${fp>=80?'#27500A':'#791F1F'};margin-bottom:8px">All tasks \u2014 click to open in ADO</div>
+      ${renderTaskCards(taskItems,s)}</div>`;
+    return;
+  }
+  let forecastPct=50;
+  if(avgV>0&&totalPts>0){const proj=avgV+(currentRate>0?(currentRate-avgV)*0.5:0);forecastPct=Math.min(99,Math.max(10,Math.round(proj/totalPts*100)));}
+  else if(allSprintItems.length===0)forecastPct=100;
+  else forecastPct=pct;
+  if(daysLeft===0&&pct<100)forecastPct=Math.min(forecastPct,pct+5);
+  const fc=forecastPct>=80?'green':forecastPct>=60?'amber':'red';
+  const neededPerDayAvg=avgV>0?Math.round(avgV/daysTotal*10)/10:0;
+  const velocityWarn=neededPerDay>0&&neededPerDayAvg>0&&neededPerDay>neededPerDayAvg*1.2;
+  $('forecast-area').innerHTML=`<div class="fc-banner ${fc}">
+    <div class="fc-top"><div class="fc-icon ${fc}"><svg viewBox="0 0 24 24"><path d="${fc==='green'?'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z':'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'}"/></svg></div>
+    <div><div class="fc-title ${fc}">${fc==='green'?'On track':'At risk'} \u2014 ${forecastPct}% likelihood of meeting sprint goal</div>
+    <div class="fc-sub ${fc}">Based on velocity, activity, remaining estimates \u00b7 ${taskItems.length} tasks in sprint</div></div></div>
+    <div class="fc-stats">
+      <div class="fc-stat"><div class="fc-stat-l">Tasks in sprint</div><div class="fc-stat-v">${taskItems.length}</div><div class="fc-stat-s">all items: ${allSprintItems.length}</div></div>
+      <div class="fc-stat"><div class="fc-stat-l">Done</div><div class="fc-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="fc-stat-s">${pct}% \u00b7 ${donePts} pts</div></div>
+      <div class="fc-stat"><div class="fc-stat-l">Remaining</div><div class="fc-stat-v" style="color:var(--amber)">${remPts} pts</div><div class="fc-stat-s">${allSprintItems.length-doneItems.length} items</div></div>
+      <div class="fc-stat"><div class="fc-stat-l">Days left</div><div class="fc-stat-v" style="color:${daysLeft<=2?'var(--red)':'var(--text)'}">${daysLeft}</div><div class="fc-stat-s">of ${daysTotal} total</div></div>
+      <div class="fc-stat"><div class="fc-stat-l">Forecast</div><div class="fc-stat-v" style="color:${fc==='green'?'var(--green)':fc==='amber'?'var(--amber)':'var(--red)'}">${forecastPct}%</div><div class="fc-stat-s">delivery chance</div></div>
+    </div>
+    ${velocityWarn?'<div style="background:rgba(255,255,255,.5);border-radius:7px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--amber)">\u26a0 Required pace ('+neededPerDay+' pts/day) exceeds historical average ('+neededPerDayAvg+' pts/day)</div>':''}
+    <div style="font-size:11px;font-weight:600;color:${fc==='green'?'#27500A':fc==='amber'?'#7A5200':'#791F1F'};margin-bottom:8px">All tasks in this sprint \u2014 click any to open in ADO</div>
+    ${renderTaskCards(taskItems,s)}</div>`;
+}
+
+function renderTaskCards(taskItems,sprintStart){
+  if(!taskItems.length)return'<div style="font-size:12px;color:var(--text-3);text-align:center;padding:1rem">No tasks found in this sprint.</div>';
+  return taskItems.map(w=>{
+    const f=w.fields;const person=getAssignee(f)||'Unassigned';
+    const days=daysSince(f['System.ChangedDate']);const staleFlag=!isDone(f)&&days>=3;
+    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];const tags=[];
+    if(isDone(f))tags.push('<span class="badge green">Done</span>');
+    if(staleFlag)tags.push('<span class="badge '+(days>=7?'red':'amber')+'">'+days+'d no update</span>');
+    return`<div class="task-card" onclick="openAdo(${w.id})">
+      <div class="tc-hdr"><span class="wi-id">#${w.id}</span>
+      <span style="font-size:11px;font-weight:500;color:var(--text);flex:1">${esc((f['System.Title']||'').slice(0,60))}</span>
+      <button class="ado-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599; ADO</button></div>
+      <div class="tc-meta"><span class="tc-assignee">Assigned to: <strong>${esc(person)}</strong></span>
+      ${pts!=null?'<span class="badge gray">'+pts+' pts</span>':''}
+      <span class="sp ${scls(f['System.State'])}">${esc(f['System.State']||'')}</span>
+      ${tags.join('')}</div></div>`;
+  }).join('');
+}
+
+function renderDelayedStale(){
+  const allDelayed=getDelayed().filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  $('delayed-count').textContent=allDelayed.length+' tasks';
+  $('delayed-list').innerHTML=allDelayed.length?allDelayed.slice(0,8).map(w=>{
+    const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
+    const d=iter?.attributes?.finishDate?daysSince(iter.attributes.finishDate):0;
+    const p=getAssignee(w.fields)||'Unassigned';
+    return`<div class="linked-row" onclick="openAdo(${w.id})">
+      <span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span>
+      <span class="badge ${d>5?'red':'amber'}">${d}d late</span><span class="wi-person">${esc(p)}</span>
+      <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button></div>`;
+  }).join('')+(allDelayed.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allDelayed.length-8)+' more</div>':'')
+  :'<div class="empty" style="padding:1rem">No delayed tasks</div>';
+
+  const allStale=getStale().filter(w=>(w.fields['System.WorkItemType']||'')==='Task'&&isActive(w.fields));
+  $('stale-list').innerHTML=allStale.length?allStale.slice(0,8).map(w=>{
+    const d=daysSince(w.fields['System.ChangedDate']);const p=getAssignee(w.fields)||'Unassigned';
+    return`<div class="linked-row" onclick="openAdo(${w.id})">
+      <span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span>
+      <span class="badge ${d>10?'red':'amber'}">${d}d silent</span><span class="wi-person">${esc(p)}</span>
+      <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button></div>`;
+  }).join('')+(allStale.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allStale.length-8)+' more</div>':'')
+  :'<div class="empty" style="padding:1rem">No stale in-progress tasks</div>';
+}
+
+function setQualityTab(type,btn){
+  qualityTabFilter=type;
+  btn.closest('.panel').querySelectorAll('.us-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');renderQuality();
+}
+
+function getQualityFeedback(w){
+  const f=w.fields;const t=f['System.WorkItemType']||'';
+  const noAC=!f['Microsoft.VSTS.Common.AcceptanceCriteria']||(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length<10;
+  const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').length;
+  const noDesc=descLen<30;const noPts=!f['Microsoft.VSTS.Scheduling.StoryPoints'];
+  const issues=[];const suggestions=[];
+  if(noAC&&t==='User Story'){issues.push('No acceptance criteria');suggestions.push('Add acceptance criteria: "Given [context], When [action], Then [outcome]".');}
+  if(noDesc){issues.push('Description too short');suggestions.push('Expand the description to include what the user needs, why, and any constraints.');}
+  if(noPts){issues.push('No story points');suggestions.push('Estimate this item in story points for velocity tracking.');}
+  const score=Math.max(0,100-issues.length*30);
+  const overall=issues.length===0?'This item looks good.':issues.length===1?'Minor issue found.':'Multiple quality issues.';
+  return{issues,suggestions,score,overall};
+}
+
+function renderQuality(){
+  const items=allWI.filter(w=>{
+    const t=w.fields['System.WorkItemType']||'';
+    if(qualityTabFilter==='User Story')return t==='User Story'&&!isDone(w.fields);
+    if(qualityTabFilter==='Task')return t==='Task'&&!isDone(w.fields);
+    return['User Story','Task'].includes(t)&&!isDone(w.fields);
+  });
+  const low=items.filter(w=>{
+    const f=w.fields;
+    const noAC=!(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10;
+    const noDesc=(f['System.Description']||'').replace(/<[^>]+>/g,'').length<30;
+    const noPts=!f['Microsoft.VSTS.Scheduling.StoryPoints'];
+    return noAC||noDesc||noPts;
+  });
+  $('quality-list').innerHTML=low.length?low.slice(0,8).map(w=>{
+    const f=w.fields;const fb=getQualityFeedback(w);
+    const p=getAssignee(f)||'Unassigned';const t=f['System.WorkItemType']||'';
+    const scoreCol=fb.score>=70?'var(--green)':fb.score>=40?'var(--amber)':'var(--red)';
+    const tags=fb.issues.map(i=>'<span class="badge '+(i.includes('No acceptance')?'red':'amber')+'">'+i+'</span>').join('');
+    const sug=fb.suggestions[0]||'';
+    return`<div class="us-item" onclick="openAdo(${w.id})">
+      <div class="us-hdr"><span class="wi-id">#${w.id}</span><span class="tp ${tcls(t)}">${esc(t)}</span>
+      <span style="font-size:11px;font-weight:500;flex:1;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((f['System.Title']||'').slice(0,50))}</span>
+      <span style="font-size:11px;font-weight:600;color:${scoreCol}">${fb.score}%</span>
+      <button class="ado-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599;</button></div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px">${tags||'<span class="badge green">Good</span>'}</div>
+      <div style="font-size:10px;color:var(--text-3)">Assigned to: ${esc(p)}</div>
+      ${fb.issues.length>0?`<div class="us-feedback"><div class="us-fb-label">AI feedback</div>${esc(fb.overall)}</div>
+      ${sug?`<div class="us-suggestion" onclick="copyText('${sug.replace(/'/g,"\\'").replace(/\n/g,' ')}',event)"><div class="us-sug-label">&#128203; Suggested fix \u2014 click to copy</div>${esc(sug.slice(0,120))}${sug.length>120?'...':''}</div>`:''}`:''}
+    </div>`;
+  }).join('')+(low.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(low.length-8)+' more</div>':'')
+  :'<div class="empty" style="padding:1rem">All items look good</div>';
+}
+
+function copyText(text,e){
+  if(e)e.stopPropagation();
+  navigator.clipboard.writeText(text).then(()=>{
+    const el=e?.target?.closest('.us-suggestion');
+    if(el){const lbl=el.querySelector('.us-sug-label');if(lbl){const orig=lbl.textContent;lbl.textContent='Copied!';setTimeout(()=>{lbl.textContent=orig;},2000);}}
+  });
+}
+
+function setClarityTab(type,btn){
+  clarityTabFilter=type;
+  btn.closest('.panel').querySelectorAll('.us-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');renderClarity();
+}
+
+function renderClarity(){
+  const items=allWI.filter(w=>{
+    const t=w.fields['System.WorkItemType']||'';
+    const hasC=(w.fields['System.CommentCount']||0)>0;
+    if(!hasC||isDone(w.fields))return false;
+    if(clarityTabFilter==='User Story')return t==='User Story';
+    if(clarityTabFilter==='Task')return t==='Task';
+    return['User Story','Task'].includes(t);
+  });
+  $('clarity-list').innerHTML=items.length?items.slice(0,8).map(w=>{
+    const f=w.fields;const count=f['System.CommentCount']||0;
+    const p=getAssignee(f)||'Unassigned';const creator=getCreator(f);
+    const t=f['System.WorkItemType']||'';const daysOld=daysSince(f['System.ChangedDate']);const isBlocking=daysOld>=2;
+    return`<div class="qc-card"><div class="qc-card-top">
+      <div class="qc-id-row"><span class="wi-id">#${w.id}</span><span class="tp ${tcls(t)}">${esc(t)}</span>
+      <span class="badge ${count>=2?'red':'amber'}">${count} comment${count>1?'s':''}</span>
+      <button class="ado-btn" style="opacity:1;margin-left:auto" onclick="openAdo(${w.id},event)">Open in ADO &#8599;</button></div>
+      <div class="qc-title">${esc(f['System.Title']||'Untitled')}</div>
+      <div class="qc-meta"><span>Assigned to: <strong>${esc(p)}</strong></span><span>Created by: <strong>${esc(creator)}</strong></span>
+      ${isBlocking?'<span style="color:var(--red);font-weight:500">Blocking for '+daysOld+'d</span>':''}</div></div>
+      <div class="qc-card-bottom"><div class="qc-ai-section">
+      <div class="qc-ai-label"><div class="qc-ai-dot" style="background:var(--amber)"></div>Comment thread</div>
+      <div class="qc-ai-feedback">This item has ${count} open comment thread${count>1?'s':''} that may contain unanswered questions.</div></div>
+      ${isBlocking?`<div style="background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--red);border-left:2px solid var(--red)">No response for ${daysOld} days \u2014 this may be blocking the developer.</div>`:''}
+    </div></div>`;
+  }).join('')+(items.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(items.length-8)+' more</div>':'')
+  :'<div class="empty" style="padding:1rem">No open comment threads found</div>';
+}
+
+function renderWorkload(){
+  const active=allWI.filter(w=>isActive(w.fields));
+  const wmap={};active.forEach(w=>{const n=getAssignee(w.fields)||'Unassigned';wmap[n]=(wmap[n]||0)+1;});
+  const ws=Object.entries(wmap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxW=ws[0]?.[1]||1;
+  const wCols=['#A32D2D','#185FA5','#534AB7','#B07400','#0D6E6E','#888'];
+  $('workload-list').innerHTML=ws.length?ws.map(([n,c],i)=>{
+    const isOver=c>=maxW*0.8&&i===0&&ws.length>1;
+    return`<div class="wl-row"><div class="av" style="background:${wCols[i%wCols.length]}">${initials(n)}</div><span class="rname">${esc(n)}</span><div class="bar-w"><div class="bar-f" style="width:${Math.round(c/maxW*100)}%;background:${wCols[i%wCols.length]}"></div></div><span class="rcount">${c}</span>${isOver?'<span class="badge red" style="margin-left:4px">High</span>':''}</div>`;
+  }).join(''):'<div class="empty" style="padding:1rem">No active assignments</div>';
+
+  const cmap={};allWI.filter(w=>isStory(w.fields)).forEach(w=>{const n=getCreator(w.fields);cmap[n]=(cmap[n]||0)+1;});
+  const cs=Object.entries(cmap).sort((a,b)=>b[1]-a[1]).slice(0,6);const maxC=cs[0]?.[1]||1;
+  const cCols=['#0D6E6E','#185FA5','#534AB7','#B07400','#888','#A32D2D'];
+  $('creators-list').innerHTML=cs.length?cs.map(([n,c],i)=>`<div class="wl-row"><div class="av" style="background:${cCols[i%cCols.length]}">${initials(n)}</div><span class="rname">${esc(n)}</span><div class="bar-w"><div class="bar-f" style="width:${Math.round(c/maxC*100)}%;background:${cCols[i%cCols.length]}"></div></div><span class="rcount">${c}</span></div>`).join('')
+  :'<div class="empty" style="padding:1rem">No story creators found</div>';
+}
+
+function renderHealth(){
+  const active=allWI.filter(w=>!isDone(w.fields));const tot=active.length||1;
+  const withA=active.filter(w=>getAssignee(w.fields)).length;
+  const withP=active.filter(w=>w.fields['Microsoft.VSTS.Scheduling.StoryPoints']>0).length;
+  const withR=active.filter(w=>w.fields['System.CreatedBy']).length;
+  const inSpr=active.filter(w=>getIterShort(w.fields)!=='').length;
+  const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7).length;
+  const stories=allWI.filter(w=>isStory(w.fields));
+  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
+  const acPct=stories.length>0?Math.round(withAC/stories.length*100):100;
+  const checks=[
+    {l:'Has assignee',p:Math.round(withA/tot*100),fix:'Filter by Unassigned in ADO Backlog and assign each item.'},
+    {l:'Has story points',p:Math.round(withP/tot*100),fix:'Run an estimation session. No item enters a sprint without story points.'},
+    {l:'Has reporter',p:Math.round(withR/tot*100),fix:'Ensure items are created while logged in with the correct user.'},
+    {l:'In a sprint',p:Math.round(inSpr/tot*100),fix:'Drag unassigned backlog items into upcoming sprints during planning.'},
+    {l:'Updated this week',p:Math.round(updW/tot*100),fix:'Enforce daily ADO updates in standup. Target: 90%+.'},
+    {l:'Acceptance criteria',p:acPct,fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.'},
+  ];
+  $('health-list').innerHTML=checks.map(c=>{
+    const col=c.p>=80?'var(--green)':c.p>=60?'var(--amber)':'var(--red)';
+    return`<div class="health-row"><div class="health-top"><span class="hl">${c.l}</span><div class="ht"><div class="hf" style="width:${c.p}%;background:${col}"></div></div><span class="hp" style="color:${col}">${c.p}%</span></div>
+    ${c.p<80?`<div class="health-tip"><div class="health-tip-label">How to improve</div>${esc(c.fix)}</div>`:''}</div>`;
+  }).join('');
+}
+
+function renderWITable(items){
+  const tb=$('wi-tbody');
+  if(!items.length){tb.innerHTML='<tr><td colspan="8" class="empty">No items found.</td></tr>';$('wi-count').textContent='';return;}
+  tb.innerHTML=items.map(w=>{
+    const f=w.fields;const t=tcls(f['System.WorkItemType']);const s=scls(f['System.State']);
+    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];
+    const assignee=getAssignee(f)||'\u2014';const creator=getCreator(f);const iter=getIterShort(f)||'\u2014';
+    const title=esc((f['System.Title']||'\u2014').slice(0,60));
+    return`<tr onclick="openAdo(${w.id})">
+      <td class="wi-id-c">#${w.id}</td><td><span class="tp ${t}">${esc(f['System.WorkItemType']||'')}</span></td>
+      <td><span class="wi-title-c" title="${title}">${title}</span></td>
+      <td><span class="sp ${s}">${esc(f['System.State']||'')}</span></td>
+      <td>${pts!=null?'<span class="pts-b">'+pts+'</span>':'<span style="color:var(--text-3)">\u2014</span>'}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:var(--text-3)">${esc(iter)}</td>
+      <td style="font-size:11px;color:var(--text-2)">${esc(assignee)}</td>
+      <td style="font-size:11px;color:var(--text-2)">${esc(creator)}</td></tr>`;
+  }).join('');
+  $('wi-count').textContent='Showing '+items.length+' items';
+}
+
+function switchView(v,btn){
+  currentView=v;
+  document.querySelectorAll('.vt-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  $('table-area').style.display=v==='table'?'':'none';
+  $('chart-area').style.display=v!=='table'?'block':'none';
+  if(v!=='table')renderChart(v);
+}
+
+function renderChart(v){
+  if(wiChartInst){wiChartInst.destroy();wiChartInst=null;}
+  const items=currentWI;if(!items.length)return;
+  let labels,data,colors,type;
+  if(v==='pie'){
+    const c={};items.forEach(w=>{const t=w.fields['System.WorkItemType']||'Other';c[t]=(c[t]||0)+1;});
+    labels=Object.keys(c);data=Object.values(c);colors=labels.map(l=>TYPE_COLORS[l]||'#888');type='pie';
+  }else{
+    const c={};items.forEach(w=>{const s=w.fields['System.State']||'Unknown';c[s]=(c[s]||0)+1;});
+    labels=Object.keys(c).sort();data=labels.map(l=>c[l]);
+    colors=labels.map(s=>{const l=s.toLowerCase();return['active','in progress','doing'].includes(l)?'#185FA5':['resolved','done','completed'].includes(l)?'#3B6D11':l==='closed'?'#888':'#B07400';});
+    type='bar';
+  }
+  wiChartInst=new Chart($('wi-chart').getContext('2d'),{
+    type,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:type==='bar'?6:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},padding:12}}},scales:type==='bar'?{y:{beginAtZero:true,ticks:{font:{size:11}}},x:{ticks:{font:{size:11}}}}:{}}
+  });
+}
+
+function populateSprintFilter(){
+  const sel=$('f-sprint');if(!sel)return;
+  sel.innerHTML='<option value="">All sprints</option>'+allIterations.map(it=>`<option value="${esc(it.name)}">${esc(it.name)}</option>`).join('');
+}
+
+function applyFilters(){
+  const tf=$('f-type')?.value||'';const sf=$('f-state')?.value||'';
+  const spf=$('f-sprint')?.value||'';const txt=($('f-text')?.value||'').toLowerCase();
+  let f=allWI;
+  if(tf)f=f.filter(w=>w.fields['System.WorkItemType']===tf);
+  if(sf)f=f.filter(w=>(w.fields['System.State']||'').toLowerCase()===sf.toLowerCase());
+  if(spf)f=f.filter(w=>getIterShort(w.fields)===spf);
+  if(txt)f=f.filter(w=>(w.fields['System.Title']||'').toLowerCase().includes(txt));
+  currentWI=f;renderWITable(f);if(currentView!=='table')renderChart(currentView);
+}
+
+function clearFilters(){
+  ['f-type','f-state','f-sprint'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  const ft=$('f-text');if(ft)ft.value='';
+  currentWI=allWI;renderWITable(allWI);if(currentView!=='table')renderChart(currentView);
+}
+
+function renderSummary(){
+  const delayed=getDelayed().length;const stale=getStale().length;
+  const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
+  const done=allWI.filter(w=>isDone(w.fields)).length;const total=allWI.length||1;
+  const pct=Math.round(done/total*100);
+  const stories=allWI.filter(w=>isStory(w.fields));
+  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
+  const acPct=stories.length>0?Math.round(withAC/stories.length*100):100;
+  const active=allWI.filter(w=>isActive(w.fields));
+  const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7).length;
+  const updateRate=active.length>0?Math.round(updW/active.length*100):100;
+  const wmap={};active.forEach(w=>{const n=getAssignee(w.fields)||'Unassigned';wmap[n]=(wmap[n]||0)+1;});
+  const ws=Object.entries(wmap).sort((a,b)=>b[1]-a[1]);
+  const topP=ws[0]?.[0]||'';const topC=ws[0]?.[1]||0;
+  const botP=ws[ws.length-1]?.[0]||'';const botC=ws[ws.length-1]?.[1]||0;
+  const withComments=allWI.filter(w=>!isDone(w.fields)&&(w.fields['System.CommentCount']||0)>0).length;
+  let score=100;
+  if(delayed>0)score-=Math.min(20,delayed*2);
+  if(stale>0)score-=Math.min(15,stale*2);
+  if(unassigned>0)score-=Math.min(10,unassigned);
+  if(acPct<50)score-=20;else if(acPct<75)score-=10;
+  if(updateRate<50)score-=15;else if(updateRate<70)score-=8;
+  score=Math.max(0,Math.min(100,score));
+  $('sum-proj').textContent=currentProject;
+  $('sum-desc').textContent='Based on '+total+' work items \u00b7 '+allIterations.length+' sprints \u00b7 '+ws.length+' active contributors';
+  $('sum-score').textContent=score;
+  $('sum-score-label').textContent='Health score \u2014 '+(score>=70?'Good':score>=50?'Needs attention':'Critical');
+  const lines=[
+    {icon:'red',path:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',cat:'Sprint delivery',catCls:'red',
+     text:delayed>0?delayed+' items are past their sprint end date.':'Sprint delivery is on track.',tags:delayed>0?[{l:delayed+' delayed',c:'urgent'}]:[{l:'On track',c:'good'}]},
+    {icon:'blue',path:'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',cat:'Clarity',catCls:'blue',
+     text:withComments>0?withComments+' active items have open comment threads.':'No outstanding comment threads.',tags:withComments>0?[{l:withComments+' with comments',c:'warn'}]:[{l:'Clear',c:'good'}]},
+    {icon:'amber',path:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',cat:'Story quality',catCls:acPct<50?'red':'amber',
+     text:acPct<75?'Only '+acPct+'% of user stories have acceptance criteria.':'Story quality is acceptable.',tags:[{l:acPct+'% quality',c:acPct<50?'urgent':'warn'}]},
+    {icon:topC>botC*3?'amber':'green',path:'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z',cat:'Resource balance',catCls:topC>botC*3?'amber':'green',
+     text:topP&&topC>botC*2?topP+' has '+topC+' active items while '+botP+' has only '+botC+'.':'Team workload is balanced.',tags:topP?[{l:topP+': '+topC,c:topC>botC*3?'urgent':'warn'},{l:botP+': '+botC,c:'good'}]:[]},
+    {icon:'blue',path:'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z',cat:'Process compliance',catCls:updateRate<60?'red':'amber',
+     text:updateRate+'% of active items updated in the last 7 days. '+unassigned+' items have no owner.',tags:[{l:updateRate+'% update rate',c:updateRate<60?'urgent':'warn'},{l:unassigned+' unassigned',c:unassigned>5?'urgent':'warn'}]},
+    {icon:'green',path:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',cat:"What's working",catCls:'green',
+     text:pct+'% of all work items are resolved. '+ws.length+' team members are actively contributing.',tags:[{l:pct+'% completion',c:'good'},{l:ws.length+' contributors',c:'good'}]},
+  ];
+  $('sum-lines').innerHTML=lines.map(l=>`<div class="sum-line">
+    <div class="sum-icon ${l.icon}"><svg viewBox="0 0 24 24"><path d="${l.path}"/></svg></div>
+    <div class="sum-body"><div class="sum-cat ${l.catCls}">${l.cat}</div><div class="sum-text">${l.text}</div></div>
+    <div class="sum-tags">${l.tags.map(t=>'<span class="sum-tag '+t.c+'">'+esc(t.l)+'</span>').join('')}</div></div>`).join('');
+  const advice=[];
+  if(withComments>0)advice.push({t:'Answer all open comment threads today \u2014 takes under 30 minutes and immediately unblocks developers.',i:'high'});
+  if(topC>botC*2&&topP&&botP)advice.push({t:'Move items from '+topP+' to '+botP+' to rebalance workload.',i:'high'});
+  if(acPct<75)advice.push({t:'Add acceptance criteria to the '+(stories.length-withAC)+' stories currently missing it.',i:'med'});
+  if(delayed>0)advice.push({t:'Triage the '+delayed+' delayed items: complete, move, or cancel.',i:'med'});
+  if(updateRate<70)advice.push({t:'Enforce daily ADO updates in standup. Target: 90%+.',i:'proc'});
+  if(unassigned>0)advice.push({t:'Assign the '+unassigned+' unowned items immediately.',i:'med'});
+  if(!advice.length)advice.push({t:'Project is in good health. Maintain backlog hygiene.',i:'good'});
+  $('advice-items').innerHTML=advice.map((a,i)=>`<div class="advice-item"><div class="advice-num">${i+1}</div>
+    <div class="advice-text">${esc(a.t)}<span class="advice-impact ${a.i}">${a.i==='high'?'High impact':a.i==='med'?'Medium':a.i==='proc'?'Process fix':'Keep up'}</span></div></div>`).join('');
+}
+
+function showScoreModal(){
+  $('modal-title').textContent='How the health score is calculated';
+  $('modal-body').innerHTML=`<p style="margin-bottom:14px;color:var(--text-2)">Score starts at <strong>100</strong> and deductions are applied:</p>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-2</div><div class="metric-pts-l">per item</div></div><div><div class="metric-name">Delayed items (max -20)</div><div class="metric-desc">Items past sprint end date.</div></div></div>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-2</div><div class="metric-pts-l">per item</div></div><div><div class="metric-name">Stale items (max -15)</div><div class="metric-desc">Active items with no update for 7+ days.</div></div></div>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--amber)">-1</div><div class="metric-pts-l">per item</div></div><div><div class="metric-name">Unassigned items (max -10)</div><div class="metric-desc">Active items with no owner.</div></div></div>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-20</div><div class="metric-pts-l">flat</div></div><div><div class="metric-name">US quality below 50%</div><div class="metric-desc">Fewer than 50% of stories have acceptance criteria.</div></div></div>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--amber)">-10</div><div class="metric-pts-l">flat</div></div><div><div class="metric-name">US quality 50-74%</div><div class="metric-desc">Partial quality signals process gaps.</div></div></div>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-15</div><div class="metric-pts-l">flat</div></div><div><div class="metric-name">ADO update rate below 50%</div><div class="metric-desc">Fewer than 50% of active items updated in 7 days.</div></div></div>
+    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--amber)">-8</div><div class="metric-pts-l">flat</div></div><div><div class="metric-name">ADO update rate 50-70%</div><div class="metric-desc">Moderate compliance. Target is 90%+.</div></div></div>
+    <div style="border-top:0.5px solid var(--border);padding-top:14px;margin-top:4px"><div style="font-size:12px;font-weight:500;margin-bottom:8px">Score ranges</div>
+    <div class="score-range-pills"><div class="srp" style="background:var(--green-light);color:var(--green)">70-100 \u00b7 Good</div><div class="srp" style="background:var(--amber-light);color:var(--amber)">50-69 \u00b7 Needs attention</div><div class="srp" style="background:var(--red-light);color:var(--red)">0-49 \u00b7 Critical</div></div></div>`;
+  $('modal-ov').classList.add('open');
+}
+
+// DELIVERY PLANS
+async function loadDeliveryPlans(project){
+  const dpSection=$('delivery-plan-section');
+  if(!dpSection)return;
+  dpSection.innerHTML='<div class="delivery-plan-bar"><div class="dp-icon gray"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg></div><div><div class="dp-title">Checking delivery plans...</div></div></div>';
+  try{
+    const r=await fetch(ORG+'/'+encodeURIComponent(project)+'/_apis/work/plans?api-version=7.1',{headers:{Authorization:AUTH,'Content-Type':'application/json'}});
+    if(r.status===404||r.status===400){renderDeliveryPlanNotInstalled(project);return;}
+    if(!r.ok){renderDeliveryPlanNotCreated(project);return;}
+    const data=await r.json();
+    const plans=(data.value||[]);
+    if(!plans.length){renderDeliveryPlanNotCreated(project);return;}
+    renderDeliveryPlans(project,plans);
+  }catch(e){renderDeliveryPlanNotCreated(project);}
+}
+
+function renderDeliveryPlanNotInstalled(project){
+  const dpSection=$('delivery-plan-section');
+  const setupUrl=ORG+'/_settings/extensions';
+  dpSection.innerHTML='<div class="delivery-plan-bar">'
+    +'<div class="dp-icon amber"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>'
+    +'<div><div class="dp-title">Delivery Plans extension not installed</div>'
+    +'<div class="dp-sub">The Delivery Plans extension needs to be installed by your ADO org admin.</div></div>'
+    +'<div class="dp-link"><button class="dp-not-created" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+setupUrl+'">Install extension &#8599;</button></div>'
+    +'</div>';
+}
+
+function renderDeliveryPlanNotCreated(project){
+  const dpSection=$('delivery-plan-section');
+  const createUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans';
+  dpSection.innerHTML='<div class="delivery-plan-bar">'
+    +'<div class="dp-icon gray" style="background:var(--red)"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg></div>'
+    +'<div><div class="dp-title" style="color:var(--red)">NOT CREATED</div>'
+    +'<div class="dp-sub">No delivery plan exists for <strong>'+esc(project)+'</strong>. Furqan cannot see cross-team sprint progress without one.</div></div>'
+    +'<div class="dp-link"><button class="dp-open-btn" style="background:var(--amber);color:#fff" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+createUrl+'">Create delivery plan &#8599;</button></div>'
+    +'</div>';
+}
+
+function renderDeliveryPlans(project,plans){
+  const dpSection=$('delivery-plan-section');
+  const mainPlan=plans[0];
+  const mainUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+mainPlan.id;
+  const allPlansUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans';
+  const daysAgo=daysSince(mainPlan.modifiedDate);
+  const updatedText=daysAgo===0?'today':daysAgo+'d ago';
+
+  let extraChips='';
+  plans.slice(1).forEach(p=>{
+    const url=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+p.id;
+    extraChips+='<div class="dp-plan-chip" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+url+'">';
+    extraChips+='<span class="dp-plan-chip-name">'+esc(p.name)+'</span>';
+    extraChips+='<span class="dp-plan-chip-icon">&#8599;</span>';
+    extraChips+='</div>';
+  });
+
+  let allPlansBtn='';
+  if(plans.length>1){
+    allPlansBtn='<button class="action-btn" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+allPlansUrl+'">All plans</button>';
+  }
+
+  dpSection.innerHTML='<div class="delivery-plan-bar">'
+    +'<div class="dp-icon green"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg></div>'
+    +'<div style="flex:1;min-width:0">'
+    +'<div class="dp-title">'+esc(mainPlan.name)+'</div>'
+    +'<div class="dp-sub">'+plans.length+' delivery plan'+(plans.length>1?'s':'')+' configured \u00b7 Last updated '+updatedText+'</div>'
+    +(extraChips?'<div class="dp-plan-list">'+extraChips+'</div>':'')
+    +'</div>'
+    +'<div class="dp-link">'
+    +'<button class="dp-open-btn" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+mainUrl+'">Open delivery plan &#8599;</button>'
+    +allPlansBtn
+    +'</div></div>';
+}
+
+// MASTER DASHBOARD
+async function loadMasterDashboard(){
+  showScreen('master-screen');
+  $('master-org').textContent=ORG.replace('https://dev.azure.com/','');
+  $('master-sdot').className='sdot loading';
+  $('master-stext').textContent='Loading '+allProjects.length+' projects...';
+  $('master-alarm').style.display='none';
+  $('master-kpis').innerHTML='<div style="grid-column:1/-1;padding:1rem;color:var(--text-3);text-align:center">Loading...</div>';
+  $('master-proj-grid').innerHTML='<div class="empty">Loading project data...</div>';
+  $('master-critical').innerHTML='<div class="empty">Loading...</div>';
+  $('master-leaderboard').innerHTML='<div class="empty">Loading...</div>';
+  $('master-scores').innerHTML='';
+  if(!allProjects.length){
+    $('master-stext').textContent='No projects found';
+    $('master-sdot').className='sdot error';
+    $('master-proj-grid').innerHTML='<div class="empty" style="color:var(--red)">No projects loaded. Sign out and re-enter PATs.</div>';
+    return;
+  }
+  masterData={};
+  for(let i=0;i<allProjects.length;i++){
+    const proj=allProjects[i];
+    const pAuth=projectAuthMap[proj.id]||AUTH;
+    const prevAuth=AUTH;AUTH=pAuth;
+    $('master-stext').textContent='Loading '+proj.name+' ('+(i+1)+'/'+allProjects.length+')...';
+    try{
+      const iters=await loadIterations(proj.name);
+      const wis=await loadWorkItems(proj.name);
+      let plans=[];
+      try{
+        const pr=await fetch(ORG+'/'+encodeURIComponent(proj.name)+'/_apis/work/plans?api-version=7.1',{headers:{Authorization:pAuth,'Content-Type':'application/json'}});
+        if(pr.ok){const pd=await pr.json();plans=pd.value||[];}
+      }catch{}
+      masterData[proj.id]={proj,allWI:wis||[],allIterations:iters||[],plans};
+    }catch(e){
+      console.warn('Failed:',proj.name,e.message);
+      masterData[proj.id]={proj,allWI:[],allIterations:[],plans:[]};
+    }
+    AUTH=prevAuth;
+  }
+  $('master-sdot').className='sdot';
+  $('master-stext').textContent='Live \u00b7 '+allProjects.length+' projects';
+  renderMasterDashboard();
+}
+
+function masterStats(d){
+  const wi=d.allWI,iters=d.allIterations;const now=new Date();
+  const total=wi.length||1;
+  const done=wi.filter(w=>isDone(w.fields));
+  const active=wi.filter(w=>isActive(w.fields));
+  const notDone=wi.filter(w=>!isDone(w.fields));
+  const delayed=wi.filter(w=>{
+    if(isDone(w.fields))return false;
+    const it=iters.find(it=>it.name===getIterShort(w.fields));
+    return it?.attributes?.finishDate&&new Date(it.attributes.finishDate)<now;
+  });
+  const unassigned=notDone.filter(w=>!getAssignee(w.fields));
+  const stories=wi.filter(w=>isStory(w.fields));
+  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10);
+  const acPct=stories.length>0?Math.round(withAC.length/stories.length*100):100;
+  const unestimated=notDone.filter(w=>!w.fields['Microsoft.VSTS.Scheduling.StoryPoints']);
+  const unestPct=notDone.length>0?Math.round(unestimated.length/notDone.length*100):0;
+  const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7);
+  const updateRate=active.length>0?Math.round(updW.length/active.length*100):100;
+  const completionPct=Math.round(done.length/total*100);
+  const curIter=iters.find(it=>{
+    const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+    return s&&e&&now>=s&&now<=e;
+  })||iters[iters.length-1]||null;
+  const sprintItems=curIter?wi.filter(w=>getIterShort(w.fields)===curIter.name):[];
+  const sprintDone=sprintItems.filter(w=>isDone(w.fields));
+  const sprintPct=sprintItems.length>0?Math.round(sprintDone.length/sprintItems.length*100):0;
+  let velocity=0;
+  const completed=iters.filter(it=>it.attributes?.finishDate&&new Date(it.attributes.finishDate)<now);
+  if(completed.length>0){
+    const last=completed[completed.length-1];
+    velocity=wi.filter(w=>getIterShort(w.fields)===last.name&&isDone(w.fields)).reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+  }
+  let scopeCreep=0;
+  iters.forEach(it=>{
+    const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+    if(!s||!e||now<s||now>e)return;
+    scopeCreep+=wi.filter(w=>getIterShort(w.fields)===it.name&&w.fields['System.CreatedDate']&&new Date(w.fields['System.CreatedDate'])>s).length;
+  });
+  let score=100;const reasons=[];
+  if(delayed.length){const d=Math.min(20,delayed.length*2);score-=d;reasons.push('-'+d+' pts \u00b7 '+delayed.length+' tasks past deadline');}
+  if(unassigned.length){const d=Math.min(10,unassigned.length);score-=d;reasons.push('-'+d+' pts \u00b7 '+unassigned.length+' items unassigned');}
+  if(acPct<50){score-=20;reasons.push('-20 pts \u00b7 AC coverage below 50%');}
+  else if(acPct<75){score-=10;reasons.push('-10 pts \u00b7 AC coverage below 75%');}
+  if(updateRate<50){score-=15;reasons.push('-15 pts \u00b7 ADO updates below 50%');}
+  else if(updateRate<70){score-=8;reasons.push('-8 pts \u00b7 ADO updates below 70%');}
+  if(unestPct>30){score-=5;reasons.push('-5 pts \u00b7 '+unestPct+'% items unestimated');}
+  if(scopeCreep>3){score-=5;reasons.push('-5 pts \u00b7 '+scopeCreep+' scope creep items');}
+  if(!reasons.length)reasons.push('No deductions \u2014 project in good standing');
+  score=Math.max(0,Math.min(100,score));
+  return{delayed,unassigned,done:done.length,total,completionPct,acPct,unestPct,updateRate,velocity,scopeCreep,curIter,sprintPct,sprintItems,active,wi,iters,score,reasons};
+}
+
+function getDeliveryPlanBadge(d){
+  const plans=d.plans||[];const projName=d.proj.name;
+  const createUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
+  if(!plans.length){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
+      +'<span style="font-size:10px;font-weight:600;color:#A32D2D">DELIVERY PLAN: NOT CREATED</span>'
+      +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#A32D2D;color:#fff;border:none;cursor:pointer;font-family:inherit"'
+      +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+createUrl+'">Create &#8599;</button>'
+      +'</div>';
+  }
+  const plan=plans[0];
+  const planUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+plan.id;
+  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px">'
+    +'<span style="font-size:10px;font-weight:600;color:#3B6D11">&#10003; DELIVERY PLAN</span>'
+    +'<span style="font-size:10px;color:#3B6D11;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(plan.name)+'</span>'
+    +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#0D6E6E;color:#fff;border:none;cursor:pointer;font-family:inherit"'
+    +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+planUrl+'">Open &#8599;</button>'
+    +'</div>';
+}
+
+function renderMasterDashboard(){
+  const entries=Object.values(masterData);
+  if(!entries.length){$('master-proj-grid').innerHTML='<div class="empty">No data loaded.</div>';return;}
+  const all=entries.map(d=>({...d,s:masterStats(d)}));
+  all.sort((a,b)=>b.s.score-a.s.score);
+  const totalDelayed=all.reduce((a,d)=>a+d.s.delayed.length,0);
+  const totalUnassigned=all.reduce((a,d)=>a+d.s.unassigned.length,0);
+  const atRisk=all.filter(d=>d.s.score<60).length;
+  const avgScore=Math.round(all.reduce((a,d)=>a+d.s.score,0)/all.length);
+  const avgAC=Math.round(all.reduce((a,d)=>a+d.s.acPct,0)/all.length);
+  const avgUpdate=Math.round(all.reduce((a,d)=>a+d.s.updateRate,0)/all.length);
+  const sc=avgScore>=70?'green':avgScore>=50?'amber':'red';
+  const ac=avgAC>=80?'green':avgAC>=60?'amber':'red';
+  const up=avgUpdate>=80?'green':avgUpdate>=60?'amber':'red';
+  $('master-kpis').innerHTML=`
+    <div class="kpi teal"><div class="kl">Active projects</div><div class="kv teal">${all.length}</div><div class="ks">across org</div></div>
+    <div class="kpi red"><div class="kl">At risk</div><div class="kv red">${atRisk}</div><div class="ks">score below 60</div></div>
+    <div class="kpi amber"><div class="kl">Delayed tasks</div><div class="kv amber">${totalDelayed}</div><div class="ks">past sprint end</div></div>
+    <div class="kpi amber"><div class="kl">Unassigned</div><div class="kv amber">${totalUnassigned}</div><div class="ks">no owner</div></div>
+    <div class="kpi ${ac}"><div class="kl">Avg AC coverage</div><div class="kv ${ac}">${avgAC}%</div><div class="ks">acceptance criteria</div></div>
+    <div class="kpi ${up}"><div class="kl">Avg ADO compliance</div><div class="kv ${up}">${avgUpdate}%</div><div class="ks">updated this week</div></div>`;
+  const pills=[];
+  if(atRisk>0)pills.push(atRisk+' project'+(atRisk>1?'s':'')+' at risk');
+  if(totalDelayed>0)pills.push(totalDelayed+' delayed tasks');
+  if(totalUnassigned>0)pills.push(totalUnassigned+' unassigned items');
+  if(pills.length){
+    $('master-alarm').style.display='flex';
+    $('master-alarm-title').textContent=pills.length+' portfolio issue'+(pills.length>1?'s':'')+' require attention';
+    $('master-alarm-pills').innerHTML=pills.map(p=>'<span class="ap">'+p+'</span>').join('');
+  }
+  $('master-proj-grid').innerHTML=all.map(d=>{
+    const s=d.s;const pidx=allProjects.findIndex(p=>p.id===d.proj.id);const col=color(pidx);
+    const sc=s.score>=70?'var(--green)':s.score>=50?'var(--amber)':'var(--red)';
+    const spc=s.sprintPct>=80?'var(--green)':s.sprintPct>=50?'var(--blue)':'var(--red)';
+    const alerts=[];
+    if(s.delayed.length)alerts.push({c:'red',t:s.delayed.length+' task'+(s.delayed.length>1?'s':'')+' past sprint deadline'});
+    if(s.unassigned.length)alerts.push({c:'amber',t:s.unassigned.length+' item'+(s.unassigned.length>1?'s':'')+' unassigned'});
+    if(s.acPct<75)alerts.push({c:'amber',t:'AC coverage '+s.acPct+'% \u2014 below 75% threshold'});
+    if(s.scopeCreep>0)alerts.push({c:'amber',t:s.scopeCreep+' scope creep item'+(s.scopeCreep>1?'s':'')});
+    if(s.updateRate<70)alerts.push({c:'amber',t:'ADO compliance at '+s.updateRate+'%'});
+    if(!alerts.length)alerts.push({c:'green',t:'No critical issues detected'});
+    const spLabel=s.curIter?s.curIter.name:'No sprint';
+    const tooltip=s.reasons.join(' \u00b7 ');
+    return`<div class="master-proj-card">
+      <div class="mpc-top">
+        <div class="mpc-av" style="background:${col}">${initials(d.proj.name)}</div>
+        <div style="flex:1;min-width:0"><div class="mpc-name">${esc(d.proj.name)}</div>
+        <div class="mpc-sub">${s.wi.length} items \u00b7 ${s.iters.length} sprint${s.iters.length!==1?'s':''}</div></div>
+        <div style="text-align:right;flex-shrink:0;margin-left:10px" title="${esc(tooltip)}">
+          <div style="font-size:22px;font-weight:600;color:${sc}">${s.score}</div>
+          <div style="font-size:9px;color:var(--text-3);cursor:help">score \u24d8</div></div>
+      </div>
+      <div class="mpc-body">
+        <div class="mpc-mini-kpis">
+          <div class="mpc-mk"><div class="mpc-mk-l">Done</div><div class="mpc-mk-v" style="color:${s.completionPct>=70?'var(--green)':'var(--text)'}">${s.completionPct}%</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">AC Cover</div><div class="mpc-mk-v" style="color:${s.acPct>=75?'var(--green)':s.acPct>=50?'var(--amber)':'var(--red)'}">${s.acPct}%</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">ADO Cmpl</div><div class="mpc-mk-v" style="color:${s.updateRate>=75?'var(--green)':s.updateRate>=50?'var(--amber)':'var(--red)'}">${s.updateRate}%</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">Velocity</div><div class="mpc-mk-v">${s.velocity>0?s.velocity+'pts':'\u2014'}</div></div>
+        </div>
+        <div class="mpc-mini-kpis" style="margin-top:5px">
+          <div class="mpc-mk"><div class="mpc-mk-l">Delayed</div><div class="mpc-mk-v" style="color:${s.delayed.length?'var(--red)':'var(--green)'}">${s.delayed.length}</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">Unassigned</div><div class="mpc-mk-v" style="color:${s.unassigned.length?'var(--amber)':'var(--green)'}">${s.unassigned.length}</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">No estimate</div><div class="mpc-mk-v" style="color:${s.unestPct>30?'var(--amber)':'var(--text)'}">${s.unestPct}%</div></div>
+          <div class="mpc-mk"><div class="mpc-mk-l">Scope creep</div><div class="mpc-mk-v" style="color:${s.scopeCreep>3?'var(--amber)':'var(--text)'}">${s.scopeCreep}</div></div>
+        </div>
+        <div class="mpc-spr-row">
+          <span class="mpc-spr-label" style="font-size:9px;max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(spLabel)}</span>
+          <div class="mpc-spr-bar"><div class="mpc-spr-fill" style="width:${s.sprintPct}%;background:${spc}"></div></div>
+          <span class="mpc-spr-pct" style="color:${spc}">${s.sprintPct}%</span>
+        </div>
+        <div class="mpc-alerts">${alerts.slice(0,2).map(a=>`<div class="mpc-alert"><div class="mpc-alert-dot" style="background:${a.c==='red'?'var(--red)':a.c==='green'?'var(--green)':'var(--amber)'}"></div>${esc(a.t)}</div>`).join('')}</div>
+        <div style="font-size:10px;color:var(--text-3);margin-bottom:8px;font-style:italic;line-height:1.4">${esc(s.reasons[0])}</div>
+        ${getDeliveryPlanBadge(d)}
+        <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard \u2192</button>
+      </div></div>`;
+  }).join('');
+
+  const crit=[];
+  all.forEach(d=>{
+    d.s.delayed.filter(w=>(w.fields['System.WorkItemType']||'')==='Task').slice(0,3).forEach(w=>{
+      const it=d.s.iters.find(it=>it.name===getIterShort(w.fields));
+      const dl=it?.attributes?.finishDate?daysSince(it.attributes.finishDate):0;
+      crit.push({id:w.id,title:(w.fields['System.Title']||'').slice(0,40),proj:d.proj.name,issue:dl+'d late',sev:'red'});
+    });
+    d.s.unassigned.filter(w=>isActive(w.fields)).slice(0,2).forEach(w=>{
+      crit.push({id:w.id,title:(w.fields['System.Title']||'').slice(0,40),proj:d.proj.name,issue:'No owner',sev:'amber'});
+    });
+  });
+  crit.sort((a,b)=>parseInt(b.issue)-parseInt(a.issue));
+  $('master-critical').innerHTML=crit.length?`<div class="wi-scroll" style="max-height:260px">
+    <table class="wi" style="table-layout:fixed;width:100%">
+      <thead><tr><th style="width:46px">ID</th><th>Title</th><th style="width:86px">Project</th><th style="width:72px">Issue</th></tr></thead>
+      <tbody>${crit.slice(0,12).map(c=>{
+        const url=ORG+'/'+encodeURIComponent(c.proj)+'/_workitems/edit/'+c.id;
+        return`<tr onclick="window.open('${url}','_blank')" style="cursor:pointer">
+          <td class="wi-id-c">#${c.id}</td>
+          <td style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${esc(c.title)}</td>
+          <td style="font-size:10px;font-weight:500;color:var(--teal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.proj)}</td>
+          <td><span class="badge ${c.sev}">${esc(c.issue)}</span></td></tr>`;
+      }).join('')}</tbody></table></div>`:'<div class="empty">No critical items</div>';
+
+  const pmap={};
+  all.forEach(d=>{
+    d.s.active.forEach(w=>{
+      const n=getAssignee(w.fields)||'Unassigned';
+      if(!pmap[n])pmap[n]={count:0,projs:new Set()};
+      pmap[n].count++;pmap[n].projs.add(d.proj.name);
+    });
+  });
+  const leaders=Object.entries(pmap).sort((a,b)=>b[1].count-a[1].count).slice(0,6);
+  const maxL=leaders[0]?.[1].count||1;
+  const lc=['#A32D2D','#185FA5','#534AB7','#B07400','#0D6E6E','#888'];
+  $('master-leaderboard').innerHTML=leaders.length?leaders.map(([n,d],i)=>`
+    <div class="leader-row">
+      <span style="font-size:11px;font-weight:500;color:var(--text-3);width:18px;text-align:center">${i+1}</span>
+      <div class="av" style="background:${lc[i%lc.length]}">${initials(n)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n)}</div>
+        <div style="font-size:10px;color:var(--text-3)">${[...d.projs].slice(0,2).map(esc).join(' \u00b7 ')}</div>
+      </div>
+      <div style="width:70px;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-right:8px">
+        <div style="width:${Math.round(d.count/maxL*100)}%;height:100%;background:${lc[i%lc.length]};border-radius:3px"></div>
+      </div>
+      <span style="font-size:11px;font-weight:600;min-width:22px;text-align:right">${d.count}</span>
+      ${i===0&&d.count>maxL*0.8&&leaders.length>1?'<span class="badge red" style="margin-left:5px">High</span>':''}
+    </div>`).join(''):'<div class="empty">No active assignments</div>';
+
+  $('master-scores').innerHTML=all.map(d=>{
+    const s=d.s.score;const col=s>=70?'var(--green)':s>=50?'var(--amber)':'var(--red)';
+    return`<div class="score-bar-row" title="${esc(d.s.reasons.join(' \u00b7 '))}">
+      <div style="width:130px;font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.proj.name)}</div>
+      <div style="flex:1;height:10px;background:var(--bg);border-radius:5px;overflow:hidden">
+        <div style="width:${s}%;height:100%;background:${col};border-radius:5px"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:${col};min-width:30px;text-align:right;margin:0 10px">${s}</div>
+      <div style="font-size:10px;color:var(--text-3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.s.reasons[0])}</div>
+    </div>`;
+  }).join('');
+}
+
+function drillIntoProject(name){
+  const idx=allProjects.findIndex(p=>p.name===name);
+  if(idx<0)return;
+  selectProject(name,idx);
+}
+</script>
+
+<!-- MASTER DASHBOARD SCREEN -->
+<div id="master-screen" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></div>
+    <div><div class="topbar-title">PMO Master Dashboard</div><div class="topbar-org" id="master-org"></div></div>
+    <div class="topbar-div"></div>
+    <div style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:3px 12px;font-size:11px;color:#fff">Portfolio view — all projects</div>
+    <div class="topbar-space"></div>
+    <div class="status-chip"><span class="sdot loading" id="master-sdot"></span><span id="master-stext">Loading...</span></div>
+    <button class="tb-btn" onclick="loadMasterDashboard()">&#8635; Refresh</button>
+    <button class="tb-btn" onclick="doLogout()">Sign out</button>
+  </div>
+  <div class="main">
+    <div class="alarm-bar" id="master-alarm" style="display:none;margin-bottom:16px">
+      <div class="alarm-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:#791F1F" id="master-alarm-title"></div><div class="alarm-pills" id="master-alarm-pills"></div></div>
+    </div>
+    <div class="slabel" style="margin-top:4px">Portfolio overview</div>
+    <div class="kpi-grid" id="master-kpis"></div>
+    <div class="slabel">Project health cards</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px" id="master-proj-grid"></div>
+    <div class="slabel">Cross-project intelligence</div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="ptitle">Critical items across all projects <span class="ptitle-sub">needs action today</span></div>
+        <div id="master-critical"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Most loaded resources <span class="ptitle-sub">across all projects</span></div>
+        <div id="master-leaderboard"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+    <div class="slabel">Health score comparison</div>
+    <div class="panel">
+      <div class="ptitle">All projects ranked <span class="ptitle-sub">lower score = needs more attention</span></div>
+      <div id="master-scores"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

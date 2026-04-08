@@ -2026,7 +2026,10 @@ function drillIntoProject(name){
     <button class="tb-btn" onclick="doLogout()">Sign out</button>
   </div>
   <div class="main">
-    <div class="alarm-pills" id="master-alarm-pills"></div></div>
+    <!-- MASTER FILTER BAR -->
+    <div id="master-filter-bar" style="margin-bottom:16px;margin-top:4px">
+      <div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px">Filter projects by issue</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="master-filter-pills"></div>
     </div>
     <div class="slabel" style="margin-top:4px">Portfolio overview</div>
     <div class="kpi-grid" id="master-kpis"></div>

@@ -791,7 +791,9 @@ function renderAlarm(){
   if(!sections.length){bar.style.display='none';return;}
   bar.style.display='flex';
   $('alarm-title').textContent=sections.length+' issue'+(sections.length>1?'s':'')+' require attention — click to review';
-  $('alarm-pills').innerHTML=sections.map(s=>'<span class="ap" onclick="document.getElementById(''+s.anchor+'').scrollIntoView({behavior:'smooth'})">'+s.count+' '+s.label+' →</span>').join('');
+  $('alarm-pills').innerHTML=sections.map(function(s){
+    return '<span class="ap" onclick="var el=document.getElementById(\'' + s.anchor + '\');if(el)el.scrollIntoView({behavior:\'smooth\'})">'+s.count+' '+s.label+' →</span>';
+  }).join('');
 }
 
 function renderKPIs(){

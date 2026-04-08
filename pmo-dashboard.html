@@ -555,7 +555,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
         </div>
         <div class="filter-bar">
           <select class="filter-select" id="f-type" onchange="applyFilters()"><option value="">All types</option><option>User Story</option><option>Task</option><option>Bug</option><option>Epic</option><option>Feature</option></select>
-          <select class="filter-select" id="f-state" onchange="applyFilters()"><option value="">All states</option><option>New</option><option>Active</option><option>Resolved</option><option>Closed</option></select>
+          <select class="filter-select" id="f-state" onchange="applyFilters()"><option value="">All states</option><option>New</option><option>Active</option><option>In Progress</option><option>Doing</option><option>Committed</option><option>Resolved</option><option>Done</option><option>Completed</option><option>Closed</option><option>Removed</option></select>
           <select class="filter-select" id="f-sprint" onchange="applyFilters()"><option value="">All sprints</option></select>
           <input class="filter-input" id="f-text" placeholder="Search title..." oninput="applyFilters()">
           <button class="filter-clear" onclick="clearFilters()">Clear</button>
@@ -1017,56 +1017,59 @@ function renderTaskCards(taskItems,sprintStart){
 function renderDelayed(){
   const POLICY=new Date('2026-03-10');
   const now=new Date();
-
-  // An item is "delayed" if created after policy date AND either:
-  // A) It's a Task: In Progress, has OriginalEstimate,
-  //    and hours elapsed since state change > OriginalEstimate
-  // B) Any item: sprint end date has passed and item is not done
+  const HOURS_PER_POINT=8; // 1 story point = 1 working day = 8 hours
 
   const delayed=allWI.filter(w=>{
     const f=w.fields;
     const t=f['System.WorkItemType']||'';
     const created=new Date(f['System.CreatedDate']||0);
-    if(created<POLICY)return false;  // pre-policy: skip
+    if(created<POLICY)return false;
     if(isDone(f))return false;
+    if(!isActive(f))return false; // only check items currently In Progress
 
-    // B) Sprint overrun — sprint ended, item not done
-    const iter=allIterations.find(it=>it.name===getIterShort(f));
-    if(iter&&iter.attributes&&iter.attributes.finishDate){
-      if(new Date(iter.attributes.finishDate)<now)return true;
+    // Get when it moved to In Progress (StateChangeDate is set when state changes)
+    const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+    if(!stateChangedStr)return false;
+    const inProgressSince=new Date(stateChangedStr);
+    const hoursElapsed=(now-inProgressSince)/3600000;
+
+    if(t==='Task'){
+      // Task: delayed if hours elapsed > Original Estimate
+      const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
+      if(orig<=0)return false; // no estimate = can't calculate
+      return hoursElapsed>orig;
     }
 
-    // A) Task in progress beyond estimated hours
-    if(t==='Task'&&isActive(f)){
-      const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
-      if(orig>0){
-        // Use StateChangeDate if available, else ChangedDate as proxy
-        const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
-        if(stateChangedStr){
-          const stateChanged=new Date(stateChangedStr);
-          const hoursElapsed=(now-stateChanged)/3600000;
-          if(hoursElapsed>orig)return true;
-        }
-        // Also check if CompletedWork already exceeds estimate
-        const completed=parseFloat(f['Microsoft.VSTS.Scheduling.CompletedWork'])||0;
-        if(completed>orig)return true;
-      }
+    if(t==='User Story'){
+      // User Story: delayed if hours elapsed > StoryPoints * HOURS_PER_POINT
+      const pts=parseFloat(f['Microsoft.VSTS.Scheduling.StoryPoints'])||0;
+      if(pts<=0)return false; // no points = can't calculate
+      const estimatedHours=pts*HOURS_PER_POINT;
+      return hoursElapsed>estimatedHours;
     }
 
     return false;
   });
 
-  // Sort: sprint overruns first (most days late), then hours overrun
+  // Sort by most overdue first
   delayed.sort((a,b)=>{
-    const getLateDays=w=>{
-      const it=allIterations.find(it=>it.name===getIterShort(w.fields));
-      if(it&&it.attributes&&it.attributes.finishDate){
-        const d=(now-new Date(it.attributes.finishDate))/86400000;
-        if(d>0)return d;
+    const getOverdueHours=w=>{
+      const f=w.fields;
+      const t=f['System.WorkItemType']||'';
+      const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+      const inProgressSince=new Date(stateChangedStr);
+      const hoursElapsed=(now-inProgressSince)/3600000;
+      if(t==='Task'){
+        const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
+        return hoursElapsed-orig;
+      }
+      if(t==='User Story'){
+        const pts=parseFloat(f['Microsoft.VSTS.Scheduling.StoryPoints'])||0;
+        return hoursElapsed-(pts*HOURS_PER_POINT);
       }
       return 0;
     };
-    return getLateDays(b)-getLateDays(a);
+    return getOverdueHours(b)-getOverdueHours(a);
   });
 
   const countEl=$('delayed-count-new');
@@ -1079,7 +1082,7 @@ function renderDelayed(){
     listEl.innerHTML='<div class="empty" style="padding:1.25rem;text-align:center">'
       +'<div style="font-size:22px;margin-bottom:6px">\u2713</div>'
       +'<div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No delayed items</div>'
-      +'<div style="font-size:11px;color:var(--text-3)">Good job! All items are within their estimated hours.</div>'
+      +'<div style="font-size:11px;color:var(--text-3)">Good job! All active items are within their estimated time.</div>'
       +'</div>';
     return;
   }
@@ -1088,35 +1091,38 @@ function renderDelayed(){
     const f=w.fields;
     const t=f['System.WorkItemType']||'';
     const assignee=getAssignee(f)||'Unassigned';
-    const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
-    const completed=parseFloat(f['Microsoft.VSTS.Scheduling.CompletedWork'])||0;
-    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];
+    const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+    const inProgressSince=new Date(stateChangedStr);
+    const hoursElapsed=Math.round((now-inProgressSince)/3600000);
 
-    // Build reason badge
-    const iter=allIterations.find(it=>it.name===getIterShort(f));
-    const sprintEnd=iter&&iter.attributes&&iter.attributes.finishDate?new Date(iter.attributes.finishDate):null;
-    const daysLate=sprintEnd&&sprintEnd<now?Math.floor((now-sprintEnd)/86400000):0;
+    let estimatedHours=0;
+    let overdueHours=0;
+    let estimateLabel='';
 
-    let hoursLate=0;
-    if(orig>0&&isActive(f)){
-      const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
-      if(stateChangedStr)hoursLate=Math.max(0,Math.round((now-new Date(stateChangedStr))/3600000)-orig);
-      if(completed>orig)hoursLate=Math.round(completed-orig);
+    if(t==='Task'){
+      const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
+      estimatedHours=orig;
+      overdueHours=Math.round(hoursElapsed-orig);
+      estimateLabel=orig+'h estimated';
+    } else if(t==='User Story'){
+      const pts=parseFloat(f['Microsoft.VSTS.Scheduling.StoryPoints'])||0;
+      estimatedHours=pts*HOURS_PER_POINT;
+      overdueHours=Math.round(hoursElapsed-estimatedHours);
+      estimateLabel=pts+' pts \u00d7 8h = '+estimatedHours+'h estimated';
     }
 
-    const reasons=[];
-    if(daysLate>0)reasons.push('<span class="badge red">'+daysLate+'d past sprint end</span>');
-    if(hoursLate>0)reasons.push('<span class="badge amber">'+hoursLate+'h over estimate</span>');
-    if(orig>0)reasons.push('<span class="badge gray">Est: '+orig+'h</span>');
-    if(completed>0)reasons.push('<span class="badge gray">Spent: '+completed+'h</span>');
-    if(pts!=null)reasons.push('<span class="badge gray">'+pts+'pts</span>');
+    const overdueDays=Math.floor(overdueHours/8); // working days
+    const overdueLabel=overdueDays>0
+      ? overdueDays+'d '+( overdueHours%8>0 ? (overdueHours%8)+'h' : '')+' overdue'
+      : overdueHours+'h overdue';
 
-    return`<div class="linked-row" onclick="openAdo(${w.id})" style="flex-wrap:wrap;gap:6px;padding:10px 6px">
+    return`<div class="linked-row" onclick="openAdo(${w.id})" style="flex-wrap:wrap;gap:6px;padding:10px 6px;align-items:center">
       <span class="wi-id">#${w.id}</span>
       <span class="tp ${tcls(t)}">${esc(t)}</span>
-      <span class="wi-title" style="flex:1;min-width:140px">${esc((f['System.Title']||'').slice(0,55))}</span>
-      <span class="sp ${scls(f['System.State'])}">${esc(f['System.State']||'')}</span>
-      <span style="display:flex;gap:4px;flex-wrap:wrap">${reasons.join('')}</span>
+      <span class="wi-title" style="flex:1;min-width:140px;font-weight:500">${esc((f['System.Title']||'').slice(0,55))}</span>
+      <span class="badge red">${esc(overdueLabel)}</span>
+      <span class="badge gray" title="Time in progress vs estimate">${hoursElapsed}h elapsed / ${estimatedHours}h est</span>
+      <span style="font-size:10px;color:var(--text-3);white-space:nowrap">${esc(estimateLabel)}</span>
       <span class="wi-person" style="font-size:11px;color:var(--text-2);white-space:nowrap">${esc(assignee)}</span>
       <button class="ado-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599;</button>
     </div>`;
@@ -1460,18 +1466,31 @@ function renderWITable(items){
   const tb=$('wi-tbody');
   if(!items.length){tb.innerHTML='<tr><td colspan="8" class="empty">No items found.</td></tr>';$('wi-count').textContent='';return;}
   tb.innerHTML=items.map(w=>{
-    const f=w.fields;const t=tcls(f['System.WorkItemType']);const s=scls(f['System.State']);
-    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];
-    const assignee=getAssignee(f)||'\u2014';const creator=getCreator(f);const iter=getIterShort(f)||'\u2014';
+    const f=w.fields;
+    const wt=f['System.WorkItemType']||'';
+    const t=tcls(wt);
+    const s=scls(f['System.State']);
+    const isTask=wt==='Task';
+    const hrs=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
+    const sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];
+    const assignee=getAssignee(f)||'\u2014';
+    const creator=getCreator(f);
+    const iter=getIterShort(f)||'\u2014';
     const title=esc((f['System.Title']||'\u2014').slice(0,60));
+    // Pts/Hrs: show hours for Tasks, story points for User Stories, dash for others
+    let ptsCell='<span style="color:var(--text-3)">\u2014</span>';
+    if(isTask&&hrs>0)ptsCell='<span class="pts-b">'+hrs+'h</span>';
+    else if(!isTask&&sp!=null&&sp!=='')ptsCell='<span class="pts-b">'+sp+'pts</span>';
     return`<tr onclick="openAdo(${w.id})">
-      <td class="wi-id-c">#${w.id}</td><td><span class="tp ${t}">${esc(f['System.WorkItemType']||'')}</span></td>
+      <td class="wi-id-c">#${w.id}</td>
+      <td><span class="tp ${t}">${esc(wt)}</span></td>
       <td><span class="wi-title-c" title="${title}">${title}</span></td>
       <td><span class="sp ${s}">${esc(f['System.State']||'')}</span></td>
-      <td>${(function(){var isTask=(f['System.WorkItemType']||'')==='Task';var hrs=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];var sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];if(isTask&&hrs>0)return'<span class="pts-b">'+hrs+'h</span>';if(!isTask&&sp!=null)return'<span class="pts-b">'+sp+'pts</span>';return'<span style="color:var(--text-3)">—</span>';})()}</td>
+      <td>${ptsCell}</td>
       <td style="font-family:var(--mono);font-size:10px;color:var(--text-3)">${esc(iter)}</td>
       <td style="font-size:11px;color:var(--text-2)">${esc(assignee)}</td>
-      <td style="font-size:11px;color:var(--text-2)">${esc(creator)}</td></tr>`;
+      <td style="font-size:11px;color:var(--text-2)">${esc(creator)}</td>
+    </tr>`;
   }).join('');
   $('wi-count').textContent='Showing '+items.length+' items';
 }

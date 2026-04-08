@@ -763,7 +763,7 @@ async function loadWorkItems(p){
   const wr=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/wiql?api-version=7.1&$top=500',{method:'POST',body:JSON.stringify(wiql)});
   const ids=(wr.workItems||[]).map(w=>w.id).slice(0,500);
   if(!ids.length)return[];
-  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
+  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.RemainingWork,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
   let all=[];
   for(let i=0;i<ids.length;i+=200){
     const d=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/workitems?ids='+ids.slice(i,i+200).join(',')+'&fields='+fields+'&api-version=7.1');
@@ -1040,11 +1040,20 @@ function getQualityFeedback(w){
   const f=w.fields;const t=f['System.WorkItemType']||'';
   const noAC=!f['Microsoft.VSTS.Common.AcceptanceCriteria']||(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length<10;
   const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').length;
-  const noDesc=descLen<30;const noPts=!f['Microsoft.VSTS.Scheduling.StoryPoints'];
+  const noDesc=descLen<30;
+  const isTaskType=t==='Task';
+  const noPts=isTaskType
+    ? !f['Microsoft.VSTS.Scheduling.OriginalEstimate']&&!f['Microsoft.VSTS.Scheduling.RemainingWork']
+    : !f['Microsoft.VSTS.Scheduling.StoryPoints'];
   const issues=[];const suggestions=[];
   if(noAC&&t==='User Story'){issues.push('No acceptance criteria');suggestions.push('Add acceptance criteria: "Given [context], When [action], Then [outcome]".');}
   if(noDesc){issues.push('Description too short');suggestions.push('Expand the description to include what the user needs, why, and any constraints.');}
-  if(noPts){issues.push('No story points');suggestions.push('Estimate this item in story points for velocity tracking.');}
+  if(noPts){
+    issues.push(isTaskType?'No estimated hours':'No story points');
+    suggestions.push(isTaskType
+      ?'Set Original Estimate in hours so sprint capacity can be tracked.'
+      :'Estimate this item in story points for velocity tracking.');
+  }
   const score=Math.max(0,100-issues.length*30);
   const overall=issues.length===0?'This item looks good.':issues.length===1?'Minor issue found.':'Multiple quality issues.';
   return{issues,suggestions,score,overall};
@@ -1058,10 +1067,13 @@ function renderQuality(){
     return['User Story','Task'].includes(t)&&!isDone(w.fields);
   });
   const low=items.filter(w=>{
-    const f=w.fields;
+    const f=w.fields;const wt=f['System.WorkItemType']||'';
     const noAC=!(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10;
     const noDesc=(f['System.Description']||'').replace(/<[^>]+>/g,'').length<30;
-    const noPts=!f['Microsoft.VSTS.Scheduling.StoryPoints'];
+    const isTaskType=wt==='Task';
+    const noPts=isTaskType
+      ? !f['Microsoft.VSTS.Scheduling.OriginalEstimate']&&!f['Microsoft.VSTS.Scheduling.RemainingWork']
+      : !f['Microsoft.VSTS.Scheduling.StoryPoints'];
     return noAC||noDesc||noPts;
   });
   $('quality-list').innerHTML=low.length?low.slice(0,8).map(w=>{

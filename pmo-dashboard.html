@@ -476,7 +476,6 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     <div class="slabel" style="margin-top:12px">Project health</div>
     <div class="kpi-grid">
       <div class="kpi red"><button class="kpi-i" onclick="showModal('Delayed Items','Work items past their sprint end date that are not resolved. Each delayed item represents a broken sprint commitment and increases carryover debt. Industry benchmark: 0 delayed items. Above 5 is a critical delivery risk.')">i</button><div class="kl">Delayed items</div><div class="kv red" id="k-delayed">-</div><div class="ks">past sprint end</div></div>
-      <div class="kpi amber"><button class="kpi-i" onclick="showModal('Stale Items (7+ days)','Active items with no update for 7+ days. Signals blocked work or a team not keeping ADO current. The 7-day threshold aligns with the Agile principle that no active item should go a full sprint without a visible update.')">i</button><div class="kl">Stale 7+ days</div><div class="kv amber" id="k-stale">-</div><div class="ks">no activity</div></div>
       <div class="kpi amber"><button class="kpi-i" onclick="showModal('Unassigned Items','Active items with no owner. Unowned work has no accountability — nobody is responsible for completing it. Industry standard: 0 unassigned items in an active sprint.')">i</button><div class="kl">Unassigned</div><div class="kv amber" id="k-unassigned">-</div><div class="ks">no owner</div></div>
       <div class="kpi red"><button class="kpi-i" onclick="showModal('No Reporter','Items with no Created By field. Without a reporter there is no accountability trail — nobody knows who requested the work, making it impossible to clarify requirements.')">i</button><div class="kl">No reporter</div><div class="kv red" id="k-noreporter">-</div><div class="ks">missing accountability</div></div>
       <div class="kpi green"><button class="kpi-i" onclick="showModal('Completion Rate','Percentage of all work items in this project that are resolved, closed, or done. A healthy project shows this increasing sprint-over-sprint at a rate matching team velocity.')">i</button><div class="kl">Completion</div><div class="kv green" id="k-completion">-</div><div class="ks" id="k-completion-s">done</div></div>
@@ -493,6 +492,11 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     </div>
     <div class="slabel">Sprint delivery forecast <span id="fc-label" style="font-size:10px;font-weight:400;color:var(--text-3);text-transform:none;letter-spacing:0"></span></div>
     <div id="forecast-area"></div>
+    <div class="slabel">Delayed items</div>
+    <div class="panel">
+      <div class="ptitle">Items delayed beyond estimate <span class="ptitle-sub" id="delayed-count-new"></span></div>
+      <div id="delayed-list-new"><div class="empty">Loading...</div></div>
+    </div>
     <div class="slabel">User story quality &amp; clarity</div>
     <div class="two-col">
       <div class="panel">
@@ -761,7 +765,8 @@ async function loadWorkItems(p){
 
 function renderAll(){
   renderAlarm();renderKPIs();renderSprintTimeline();
-renderQuality();renderClarity();
+  renderDelayed();
+  renderQuality();renderClarity();
   renderWorkload();renderHealth();renderWITable(allWI);
   populateSprintFilter();loadDeliveryPlans(currentProject);renderSummary();
 }
@@ -775,12 +780,9 @@ function getDelayed(){
     return new Date(iter.attributes.finishDate)<now;
   });
 }
-function getStale(){return allWI.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=7);}
 function getSprintItems(name){return allWI.filter(w=>getIterShort(w.fields)===name);}
 
 function renderAlarm(){
-  const delayed=getDelayed().filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  const stale=getStale().filter(w=>(w.fields['System.WorkItemType']||'')==='Task'&&isActive(w.fields));
   const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
   const sections=[
     {count:unassigned.length,label:'unassigned items',anchor:'workload-anchor'},
@@ -788,22 +790,29 @@ function renderAlarm(){
   const bar=$('alarm-bar');
   if(!sections.length){bar.style.display='none';return;}
   bar.style.display='flex';
-  $('alarm-title').textContent=sections.length+' issue'+(sections.length>1?'s':'')+' require attention \u2014 click to review';
-  $('alarm-pills').innerHTML=sections.map(s=>'<span class="ap" onclick="document.getElementById(\''+s.anchor+'\').scrollIntoView({behavior:\'smooth\'})">'+s.count+' '+s.label+' &#8594;</span>').join('');
+  $('alarm-title').textContent=sections.length+' issue'+(sections.length>1?'s':'')+' require attention — click to review';
+  $('alarm-pills').innerHTML=sections.map(s=>'<span class="ap" onclick="document.getElementById(''+s.anchor+'').scrollIntoView({behavior:'smooth'})">'+s.count+' '+s.label+' →</span>').join('');
 }
 
 function renderKPIs(){
-  const delayed=getDelayed().length;const stale=getStale().length;
+  const POLICY=new Date('2026-03-15');
+  const delayed=getDelayed().length;
   const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
   const noReporter=allWI.filter(w=>!w.fields['System.CreatedBy']).length;
-  const done=allWI.filter(w=>isDone(w.fields)).length;const total=allWI.length||1;
+  const done=allWI.filter(w=>isDone(w.fields)).length;
+  const total=allWI.length||1;
   const pct=Math.round(done/total*100);
-  const stories=allWI.filter(w=>isStory(w.fields));
+  // Quality: only items created after policy date
+  const policyItems=allWI.filter(w=>new Date(w.fields['System.CreatedDate'])>=POLICY);
+  const stories=policyItems.filter(w=>isStory(w.fields));
   const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
   const qPct=stories.length>0?Math.round(withAC/stories.length*100):100;
-  $('k-delayed').textContent=delayed;$('k-stale').textContent=stale;$('k-unassigned').textContent=unassigned;
-  $('k-noreporter').textContent=noReporter;$('k-completion').textContent=pct+'%';
-  $('k-completion-s').textContent=done+' of '+total+' done';$('k-quality').textContent=qPct+'%';
+  $('k-delayed').textContent=delayed;
+  $('k-unassigned').textContent=unassigned;
+  $('k-noreporter').textContent=noReporter;
+  $('k-completion').textContent=pct+'%';
+  $('k-completion-s').textContent=done+' of '+total+' done';
+  $('k-quality').textContent=qPct+'%';
   const qc=$('kpi-quality');
   qc.className='kpi '+(qPct<50?'red':qPct<75?'amber':'green');
   $('k-quality').className='kv '+(qPct<50?'red':qPct<75?'amber':'green');
@@ -992,6 +1001,76 @@ function renderTaskCards(taskItems,sprintStart){
 
 
 
+function renderDelayed(){
+  // Items are "delayed" if:
+  // - Not done
+  // - Task: has OriginalEstimate but RemainingWork is 0 or exceeded (spent > estimated)
+  //   OR task has been Active for longer than its estimate in days (rough heuristic)
+  // - User Story: has story points but sprint end date has passed
+  // - Any item: sprint end date has passed and item is not done
+  const now=new Date();
+  const delayed=allWI.filter(w=>{
+    if(isDone(w.fields))return false;
+    const f=w.fields;
+    const t=f['System.WorkItemType']||'';
+    // Check sprint overrun (sprint ended but item not done)
+    const iter=allIterations.find(it=>it.name===getIterShort(f));
+    const sprintOverrun=iter&&iter.attributes&&iter.attributes.finishDate&&new Date(iter.attributes.finishDate)<now;
+    if(sprintOverrun)return true;
+    // Check estimated hours overrun for Tasks
+    if(t==='Task'){
+      const orig=f['Microsoft.VSTS.Scheduling.OriginalEstimate']||0;
+      const remaining=f['Microsoft.VSTS.Scheduling.RemainingWork'];
+      // If remaining work is explicitly set to more than original estimate
+      if(orig>0&&remaining!=null&&remaining>orig)return true;
+      // If completed work exceeds original estimate
+      const completed=f['Microsoft.VSTS.Scheduling.CompletedWork']||0;
+      if(orig>0&&completed>orig)return true;
+    }
+    return false;
+  });
+
+  const countEl=$('delayed-count-new');
+  if(countEl)countEl.textContent=delayed.length+' item'+(delayed.length!==1?'s':'');
+
+  const listEl=$('delayed-list-new');
+  if(!listEl)return;
+
+  if(!delayed.length){
+    listEl.innerHTML='<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No delayed items</div><div style="font-size:11px;color:var(--text-3)">Good job! All items are on track.</div></div>';
+    return;
+  }
+
+  listEl.innerHTML=delayed.slice(0,15).map(w=>{
+    const f=w.fields;
+    const t=f['System.WorkItemType']||'';
+    const assignee=getAssignee(f)||'Unassigned';
+    const iter=allIterations.find(it=>it.name===getIterShort(f));
+    const sprintEnd=iter&&iter.attributes&&iter.attributes.finishDate?new Date(iter.attributes.finishDate):null;
+    const daysLate=sprintEnd&&sprintEnd<now?Math.floor((now-sprintEnd)/86400000):0;
+    const orig=f['Microsoft.VSTS.Scheduling.OriginalEstimate']||0;
+    const remaining=f['Microsoft.VSTS.Scheduling.RemainingWork'];
+    const completed=f['Microsoft.VSTS.Scheduling.CompletedWork']||0;
+    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];
+
+    let reason='';
+    if(daysLate>0)reason=daysLate+'d past sprint end';
+    else if(t==='Task'&&orig>0&&completed>orig)reason='Spent '+completed+'h vs '+orig+'h estimated';
+    else if(t==='Task'&&orig>0&&remaining!=null&&remaining>orig)reason=remaining+'h remaining vs '+orig+'h estimated';
+
+    return`<div class="linked-row" onclick="openAdo(${w.id})">
+      <span class="wi-id">#${w.id}</span>
+      <span class="tp ${tcls(t)}">${esc(t)}</span>
+      <span class="wi-title" style="flex:1">${esc((f['System.Title']||'').slice(0,50))}</span>
+      ${reason?'<span class="badge red">'+esc(reason)+'</span>':''}
+      ${pts!=null?'<span class="badge gray">'+pts+'pts</span>':''}
+      ${orig>0?'<span class="badge gray">'+orig+'h est</span>':''}
+      <span class="wi-person">${esc(assignee)}</span>
+      <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button>
+    </div>`;
+  }).join('')+(delayed.length>15?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(delayed.length-15)+' more</div>':'');
+}
+
 function setQualityTab(type,btn){
   qualityTabFilter=type;
   btn.closest('.panel').querySelectorAll('.us-tab').forEach(t=>t.classList.remove('active'));
@@ -1024,11 +1103,15 @@ function getQualityFeedback(w){
 }
 
 function renderQuality(){
+  const POLICY=new Date('2026-03-15');
+  // Only check items created on or after policy date
   const items=allWI.filter(w=>{
     const t=w.fields['System.WorkItemType']||'';
+    const created=new Date(w.fields['System.CreatedDate']||0);
+    if(created<POLICY)return false; // pre-policy: skip
     if(qualityTabFilter==='User Story')return t==='User Story'&&!isDone(w.fields);
     if(qualityTabFilter==='Task')return t==='Task'&&!isDone(w.fields);
-    return['User Story','Task'].includes(t)&&!isDone(w.fields);
+    return(t==='User Story'||t==='Task')&&!isDone(w.fields);
   });
   const low=items.filter(w=>{
     const f=w.fields;const wt=f['System.WorkItemType']||'';
@@ -1058,7 +1141,7 @@ function renderQuality(){
       ${sug?`<div class="us-suggestion" style="cursor:default"><div class="us-sug-label">&#128161; Suggested fix</div>${esc(sug.slice(0,120))}${sug.length>120?'...':''}</div>`:''}`:''}
     </div>`;
   }).join('')+(low.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(low.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All User Stories have Story Points and Acceptance Criteria, and all Tasks have Estimated Hours set.</div></div>';
+  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All User Stories have Story Points and Acceptance Criteria, and all Tasks have Estimated Hours set.</div></div>';
 }
 
 function copyText(text,e){
@@ -1225,70 +1308,37 @@ function renderWorkload(){
 }
 
 function renderHealth(){
+  const POLICY=new Date('2026-03-15');
   const active=allWI.filter(w=>!isDone(w.fields));
   const tot=active.length||1;
-
   const withA=active.filter(w=>getAssignee(w.fields)).length;
   const withR=active.filter(w=>w.fields['System.CreatedBy']).length;
   const inSpr=active.filter(w=>getIterShort(w.fields)!=='').length;
   const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7).length;
-
-  // Story points: only User Stories
-  const activeStories=active.filter(w=>isStory(w.fields));
-  const storiesWithPts=activeStories.filter(w=>w.fields['Microsoft.VSTS.Scheduling.StoryPoints']>0).length;
-  const storyPtsPct=activeStories.length>0?Math.round(storiesWithPts/activeStories.length*100):100;
-
-  // Estimated hours: only Tasks
-  const activeTasks=active.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  const tasksWithEst=activeTasks.filter(w=>
-    w.fields['Microsoft.VSTS.Scheduling.OriginalEstimate']>0||
-    w.fields['Microsoft.VSTS.Scheduling.RemainingWork']>0
+  // Policy-gated checks — only items created >= March 15 2026
+  const policyActive=active.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
+  const policyStories=policyActive.filter(w=>isStory(w.fields));
+  const storiesWithPts=policyStories.filter(w=>w.fields['Microsoft.VSTS.Scheduling.StoryPoints']>0).length;
+  const storyPtsPct=policyStories.length>0?Math.round(storiesWithPts/policyStories.length*100):100;
+  const policyTasks=policyActive.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const tasksWithEst=policyTasks.filter(w=>
+    (w.fields['Microsoft.VSTS.Scheduling.OriginalEstimate']||0)>0||
+    (w.fields['Microsoft.VSTS.Scheduling.RemainingWork']||0)>0
   ).length;
-  const taskEstPct=activeTasks.length>0?Math.round(tasksWithEst/activeTasks.length*100):100;
-
-  // Acceptance criteria: only User Stories
-  const allStories=allWI.filter(w=>isStory(w.fields));
-  const withAC=allStories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
-  const acPct=allStories.length>0?Math.round(withAC/allStories.length*100):100;
-
+  const taskEstPct=policyTasks.length>0?Math.round(tasksWithEst/policyTasks.length*100):100;
+  const allPolicyStories=allWI.filter(w=>isStory(w.fields)&&new Date(w.fields['System.CreatedDate']||0)>=POLICY);
+  const withAC=allPolicyStories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
+  const acPct=allPolicyStories.length>0?Math.round(withAC/allPolicyStories.length*100):100;
+  const suffix=' (post Mar\u00a015)';
   const checks=[
-    {
-      l:'Assignee set',
-      p:Math.round(withA/tot*100),
-      fix:'Filter by Unassigned in ADO Backlog and assign each item. Target: 100%.'
-    },
-    {
-      l:'Has reporter',
-      p:Math.round(withR/tot*100),
-      fix:'Ensure items are created while logged in to ADO with the correct user.'
-    },
-    {
-      l:'In a sprint',
-      p:Math.round(inSpr/tot*100),
-      fix:'Drag unassigned backlog items into upcoming sprints during planning.'
-    },
-    {
-      l:'Updated this week',
-      p:Math.round(updW/tot*100),
-      fix:'Enforce daily ADO updates in standup. Every active item needs a state change or comment. Target: 90%+.'
-    },
-    {
-      l:'User Stories have story points'+(activeStories.length>0?' ('+activeStories.length+')':''),
-      p:storyPtsPct,
-      fix:'Open ADO Backlog, filter by User Story, sort by Story Points. Estimate any missing ones before the next sprint planning session.'
-    },
-    {
-      l:'Tasks have estimated hours'+(activeTasks.length>0?' ('+activeTasks.length+')':''),
-      p:taskEstPct,
-      fix:'Open each Task in ADO and set Original Estimate in hours. This is required for sprint capacity planning.'
-    },
-    {
-      l:'User Stories have acceptance criteria'+(allStories.length>0?' ('+allStories.length+')':''),
-      p:acPct,
-      fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint. Make this a PM gate.'
-    },
+    {l:'Assignee set',p:Math.round(withA/tot*100),fix:'Filter by Unassigned in ADO Backlog and assign each item. Target: 100%.'},
+    {l:'Has reporter',p:Math.round(withR/tot*100),fix:'Ensure items are created while logged in to ADO with the correct user.'},
+    {l:'In a sprint',p:Math.round(inSpr/tot*100),fix:'Drag unassigned backlog items into upcoming sprints during planning.'},
+    {l:'Updated this week',p:Math.round(updW/tot*100),fix:'Enforce daily ADO updates in standup. Every active item needs a state change or comment. Target: 90%+.'},
+    {l:'User Stories have story points'+suffix+(policyStories.length>0?' ('+policyStories.length+')':''),p:storyPtsPct,fix:'Open ADO Backlog, filter by User Story, sort by Story Points. Estimate any missing ones before the next sprint planning.'},
+    {l:'Tasks have estimated hours'+suffix+(policyTasks.length>0?' ('+policyTasks.length+')':''),p:taskEstPct,fix:'Open each Task in ADO and set Original Estimate in hours. Required for sprint capacity planning.'},
+    {l:'User Stories have acceptance criteria'+suffix+(allPolicyStories.length>0?' ('+allPolicyStories.length+')':''),p:acPct,fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.'},
   ];
-
   $('health-list').innerHTML=checks.map(c=>{
     const col=c.p>=80?'var(--green)':c.p>=60?'var(--amber)':'var(--red)';
     return`<div class="health-row">
@@ -1372,7 +1422,7 @@ function clearFilters(){
 }
 
 function renderSummary(){
-  const delayed=getDelayed().length;const stale=getStale().length;
+  const delayed=getDelayed().length;
   const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
   const done=allWI.filter(w=>isDone(w.fields)).length;const total=allWI.length||1;
   const pct=Math.round(done/total*100);
@@ -1389,7 +1439,6 @@ function renderSummary(){
   const withComments=allWI.filter(w=>!isDone(w.fields)&&(w.fields['System.CommentCount']||0)>0).length;
   let score=100;
   if(delayed>0)score-=Math.min(20,delayed*2);
-  if(stale>0)score-=Math.min(15,stale*2);
   if(unassigned>0)score-=Math.min(10,unassigned);
   if(acPct<50)score-=20;else if(acPct<75)score-=10;
   if(updateRate<50)score-=15;else if(updateRate<70)score-=8;
@@ -1432,7 +1481,6 @@ function showScoreModal(){
   $('modal-title').textContent='How the health score is calculated';
   $('modal-body').innerHTML=`<p style="margin-bottom:14px;color:var(--text-2)">Score starts at <strong>100</strong> and deductions are applied:</p>
     <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-2</div><div class="metric-pts-l">per item</div></div><div><div class="metric-name">Delayed items (max -20)</div><div class="metric-desc">Items past sprint end date.</div></div></div>
-    <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-2</div><div class="metric-pts-l">per item</div></div><div><div class="metric-name">Stale items (max -15)</div><div class="metric-desc">Active items with no update for 7+ days.</div></div></div>
     <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--amber)">-1</div><div class="metric-pts-l">per item</div></div><div><div class="metric-name">Unassigned items (max -10)</div><div class="metric-desc">Active items with no owner.</div></div></div>
     <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--red)">-20</div><div class="metric-pts-l">flat</div></div><div><div class="metric-name">US quality below 50%</div><div class="metric-desc">Fewer than 50% of stories have acceptance criteria.</div></div></div>
     <div class="metric-row"><div class="metric-pts"><div class="metric-pts-v" style="color:var(--amber)">-10</div><div class="metric-pts-l">flat</div></div><div><div class="metric-name">US quality 50-74%</div><div class="metric-desc">Partial quality signals process gaps.</div></div></div>

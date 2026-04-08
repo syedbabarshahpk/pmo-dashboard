@@ -613,21 +613,30 @@ let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='ta
 let qualityTabFilter='all', clarityTabFilter='all';
 let isFurqanMode=false, masterData={}, masterFilter='all';
 
+// Work item types that require estimates (Issues excluded)
+const ESTIMATABLE_TYPES=['User Story','Task','Bug','Feature','Epic','Product Backlog Item','Requirement','Change Request','Review','Risk'];
+function requiresEstimate(f){
+  const wt=f['System.WorkItemType']||'';
+  // Issues and Test Plans/Suites/Cases don't use estimates
+  if(['Issue','Impediment','Test Plan','Test Suite','Test Case'].includes(wt))return false;
+  return ESTIMATABLE_TYPES.includes(wt)||wt==='Task';
+}
+
 // Get the best available estimate from a work item's fields
 // ADO uses different field names depending on process template:
 // - Agile:  StoryPoints (US), OriginalEstimate (Task)
 // - Scrum:  Effort (US/PBI), OriginalEstimate (Task)
 // - CMMI:   Size (US), OriginalEstimate (Task)
 function getEstimate(f){
-  const wt=(f['System.WorkItemType']||'').toLowerCase();
-  const isTask=wt==='task';
+  const wt=(f['System.WorkItemType']||'');
+  const isTask=wt==='Task';
   if(isTask){
-    // Tasks always use OriginalEstimate
+    // Tasks use OriginalEstimate (hours)
     const oe=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];
     if(oe!==null&&oe!==undefined&&oe!=='')return Number(oe)||0;
     return 0;
   }
-  // User Stories / PBIs / Features — check all possible fields
+  // User Stories / PBIs / Features / Bugs — check all possible point/effort fields
   const sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];
   if(sp!==null&&sp!==undefined&&sp!=='')return Number(sp)||0;
   const effort=f['Microsoft.VSTS.Scheduling.Effort'];
@@ -637,17 +646,18 @@ function getEstimate(f){
   return 0;
 }
 
-// Get hours estimate for a task (original estimate hours)
+// Get hours estimate for a task
 function getTaskHours(f){
   const oe=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];
   if(oe!==null&&oe!==undefined&&oe!=='')return Number(oe)||0;
   return 0;
 }
 
-// Check if a work item has any estimate set
+// Check if a work item has any estimate set (Issues are excluded)
 function hasAnyEstimate(f){
-  const wt=(f['System.WorkItemType']||'').toLowerCase();
-  if(wt==='task') return getTaskHours(f)>0;
+  if(!requiresEstimate(f))return true; // Items that don't need estimates always pass
+  const wt=f['System.WorkItemType']||'';
+  if(wt==='Task')return getTaskHours(f)>0;
   return getEstimate(f)>0;
 }
 
@@ -1198,12 +1208,14 @@ function getQualityFeedback(w){
 function renderQuality(){
   const POLICY=new Date('2026-03-10');
 
-  // Items to check: User Stories and Tasks, not done, created after policy date
+  // Items to check: User Stories and Tasks only (not Issues), not done, created after policy date
+  const SKIP_TYPES=['Issue','Impediment','Test Plan','Test Suite','Test Case'];
   const items=allWI.filter(w=>{
     const t=w.fields['System.WorkItemType']||'';
     const created=new Date(w.fields['System.CreatedDate']||0);
     if(created<POLICY)return false;
     if(isDone(w.fields))return false;
+    if(SKIP_TYPES.includes(t))return false; // Issues don't need estimates/AC
     if(qualityTabFilter==='User Story')return t==='User Story';
     if(qualityTabFilter==='Task')return t==='Task';
     return t==='User Story'||t==='Task';
@@ -1508,15 +1520,11 @@ function renderWITable(items){
     const iter=getIterShort(f)||'\u2014';
     const title=esc((f['System.Title']||'\u2014').slice(0,60));
 
-    // Use the unified getEstimate/getTaskHours helpers
-    let ptsCell='<span style="color:var(--text-3)">\u2014</span>';
-    if(isTask){
-      const hrs=getTaskHours(f);
-      if(hrs>0)ptsCell='<span class="pts-b">'+hrs+'h</span>';
-    } else {
-      const est=getEstimate(f);
-      if(est>0)ptsCell='<span class="pts-b">'+est+'pts</span>';
-    }
+    // Use unified helpers — Issues show N/A, Tasks show hours, others show pts
+    let ptsCell;
+    if(!requiresEstimate(f)){ptsCell='<span style="color:var(--text-3);font-size:9px">N/A</span>';}
+    else if(isTask){const hrs=getTaskHours(f);ptsCell=hrs>0?'<span class="pts-b">'+hrs+'h</span>':'<span style="color:var(--text-3)">—</span>';}
+    else{const est=getEstimate(f);ptsCell=est>0?'<span class="pts-b">'+est+'pts</span>':'<span style="color:var(--text-3)">—</span>';}
 
     return`<tr onclick="openAdo(${w.id})">
       <td class="wi-id-c">#${w.id}</td>

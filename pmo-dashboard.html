@@ -754,7 +754,7 @@ async function loadWorkItems(p){
   const wr=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/wiql?api-version=7.1&$top=500',{method:'POST',body:JSON.stringify(wiql)});
   const ids=(wr.workItems||[]).map(w=>w.id).slice(0,500);
   if(!ids.length)return[];
-  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.RemainingWork,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
+  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.RemainingWork,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Common.StateChangeDate,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
   let all=[];
   for(let i=0;i<ids.length;i+=200){
     const d=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/workitems?ids='+ids.slice(i,i+200).join(',')+'&fields='+fields+'&api-version=7.1');
@@ -1002,32 +1002,58 @@ function renderTaskCards(taskItems,sprintStart){
 
 
 function renderDelayed(){
-  // Items are "delayed" if:
-  // - Not done
-  // - Task: has OriginalEstimate but RemainingWork is 0 or exceeded (spent > estimated)
-  //   OR task has been Active for longer than its estimate in days (rough heuristic)
-  // - User Story: has story points but sprint end date has passed
-  // - Any item: sprint end date has passed and item is not done
+  const POLICY=new Date('2026-03-15');
   const now=new Date();
+
+  // An item is "delayed" if created after policy date AND either:
+  // A) It's a Task: In Progress, has OriginalEstimate,
+  //    and hours elapsed since state change > OriginalEstimate
+  // B) Any item: sprint end date has passed and item is not done
+
   const delayed=allWI.filter(w=>{
-    if(isDone(w.fields))return false;
     const f=w.fields;
     const t=f['System.WorkItemType']||'';
-    // Check sprint overrun (sprint ended but item not done)
+    const created=new Date(f['System.CreatedDate']||0);
+    if(created<POLICY)return false;  // pre-policy: skip
+    if(isDone(f))return false;
+
+    // B) Sprint overrun — sprint ended, item not done
     const iter=allIterations.find(it=>it.name===getIterShort(f));
-    const sprintOverrun=iter&&iter.attributes&&iter.attributes.finishDate&&new Date(iter.attributes.finishDate)<now;
-    if(sprintOverrun)return true;
-    // Check estimated hours overrun for Tasks
-    if(t==='Task'){
-      const orig=f['Microsoft.VSTS.Scheduling.OriginalEstimate']||0;
-      const remaining=f['Microsoft.VSTS.Scheduling.RemainingWork'];
-      // If remaining work is explicitly set to more than original estimate
-      if(orig>0&&remaining!=null&&remaining>orig)return true;
-      // If completed work exceeds original estimate
-      const completed=f['Microsoft.VSTS.Scheduling.CompletedWork']||0;
-      if(orig>0&&completed>orig)return true;
+    if(iter&&iter.attributes&&iter.attributes.finishDate){
+      if(new Date(iter.attributes.finishDate)<now)return true;
     }
+
+    // A) Task in progress beyond estimated hours
+    if(t==='Task'&&isActive(f)){
+      const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
+      if(orig>0){
+        // Use StateChangeDate if available, else ChangedDate as proxy
+        const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+        if(stateChangedStr){
+          const stateChanged=new Date(stateChangedStr);
+          const hoursElapsed=(now-stateChanged)/3600000;
+          if(hoursElapsed>orig)return true;
+        }
+        // Also check if CompletedWork already exceeds estimate
+        const completed=parseFloat(f['Microsoft.VSTS.Scheduling.CompletedWork'])||0;
+        if(completed>orig)return true;
+      }
+    }
+
     return false;
+  });
+
+  // Sort: sprint overruns first (most days late), then hours overrun
+  delayed.sort((a,b)=>{
+    const getLateDays=w=>{
+      const it=allIterations.find(it=>it.name===getIterShort(w.fields));
+      if(it&&it.attributes&&it.attributes.finishDate){
+        const d=(now-new Date(it.attributes.finishDate))/86400000;
+        if(d>0)return d;
+      }
+      return 0;
+    };
+    return getLateDays(b)-getLateDays(a);
   });
 
   const countEl=$('delayed-count-new');
@@ -1037,38 +1063,51 @@ function renderDelayed(){
   if(!listEl)return;
 
   if(!delayed.length){
-    listEl.innerHTML='<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No delayed items</div><div style="font-size:11px;color:var(--text-3)">Good job! All items are on track.</div></div>';
+    listEl.innerHTML='<div class="empty" style="padding:1.25rem;text-align:center">'
+      +'<div style="font-size:22px;margin-bottom:6px">\u2713</div>'
+      +'<div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No delayed items</div>'
+      +'<div style="font-size:11px;color:var(--text-3)">Good job! All items are within their estimated hours.</div>'
+      +'</div>';
     return;
   }
 
-  listEl.innerHTML=delayed.slice(0,15).map(w=>{
+  listEl.innerHTML=delayed.slice(0,20).map(w=>{
     const f=w.fields;
     const t=f['System.WorkItemType']||'';
     const assignee=getAssignee(f)||'Unassigned';
+    const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
+    const completed=parseFloat(f['Microsoft.VSTS.Scheduling.CompletedWork'])||0;
+    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];
+
+    // Build reason badge
     const iter=allIterations.find(it=>it.name===getIterShort(f));
     const sprintEnd=iter&&iter.attributes&&iter.attributes.finishDate?new Date(iter.attributes.finishDate):null;
     const daysLate=sprintEnd&&sprintEnd<now?Math.floor((now-sprintEnd)/86400000):0;
-    const orig=f['Microsoft.VSTS.Scheduling.OriginalEstimate']||0;
-    const remaining=f['Microsoft.VSTS.Scheduling.RemainingWork'];
-    const completed=f['Microsoft.VSTS.Scheduling.CompletedWork']||0;
-    const pts=f['Microsoft.VSTS.Scheduling.StoryPoints'];
 
-    let reason='';
-    if(daysLate>0)reason=daysLate+'d past sprint end';
-    else if(t==='Task'&&orig>0&&completed>orig)reason='Spent '+completed+'h vs '+orig+'h estimated';
-    else if(t==='Task'&&orig>0&&remaining!=null&&remaining>orig)reason=remaining+'h remaining vs '+orig+'h estimated';
+    let hoursLate=0;
+    if(orig>0&&isActive(f)){
+      const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+      if(stateChangedStr)hoursLate=Math.max(0,Math.round((now-new Date(stateChangedStr))/3600000)-orig);
+      if(completed>orig)hoursLate=Math.round(completed-orig);
+    }
 
-    return`<div class="linked-row" onclick="openAdo(${w.id})">
+    const reasons=[];
+    if(daysLate>0)reasons.push('<span class="badge red">'+daysLate+'d past sprint end</span>');
+    if(hoursLate>0)reasons.push('<span class="badge amber">'+hoursLate+'h over estimate</span>');
+    if(orig>0)reasons.push('<span class="badge gray">Est: '+orig+'h</span>');
+    if(completed>0)reasons.push('<span class="badge gray">Spent: '+completed+'h</span>');
+    if(pts!=null)reasons.push('<span class="badge gray">'+pts+'pts</span>');
+
+    return`<div class="linked-row" onclick="openAdo(${w.id})" style="flex-wrap:wrap;gap:6px;padding:10px 6px">
       <span class="wi-id">#${w.id}</span>
       <span class="tp ${tcls(t)}">${esc(t)}</span>
-      <span class="wi-title" style="flex:1">${esc((f['System.Title']||'').slice(0,50))}</span>
-      ${reason?'<span class="badge red">'+esc(reason)+'</span>':''}
-      ${pts!=null?'<span class="badge gray">'+pts+'pts</span>':''}
-      ${orig>0?'<span class="badge gray">'+orig+'h est</span>':''}
-      <span class="wi-person">${esc(assignee)}</span>
-      <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button>
+      <span class="wi-title" style="flex:1;min-width:140px">${esc((f['System.Title']||'').slice(0,55))}</span>
+      <span class="sp ${scls(f['System.State'])}">${esc(f['System.State']||'')}</span>
+      <span style="display:flex;gap:4px;flex-wrap:wrap">${reasons.join('')}</span>
+      <span class="wi-person" style="font-size:11px;color:var(--text-2);white-space:nowrap">${esc(assignee)}</span>
+      <button class="ado-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599;</button>
     </div>`;
-  }).join('')+(delayed.length>15?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(delayed.length-15)+' more</div>':'');
+  }).join('')+(delayed.length>20?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(delayed.length-20)+' more</div>':'');
 }
 
 function setQualityTab(type,btn){
@@ -1078,24 +1117,25 @@ function setQualityTab(type,btn){
 }
 
 function getQualityFeedback(w){
-  const f=w.fields;const t=f['System.WorkItemType']||'';
-  const noAC=!f['Microsoft.VSTS.Common.AcceptanceCriteria']||(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length<10;
-  const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').length;
-  const noDesc=descLen<30;
-  const isTaskType=t==='Task';
-  // Tasks use OriginalEstimate or RemainingWork — treated same as story points
-  const hasEstimate=isTaskType
-    ? !!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']||f['Microsoft.VSTS.Scheduling.RemainingWork'])
-    : !!(f['Microsoft.VSTS.Scheduling.StoryPoints']);
-  const noPts=!hasEstimate;
+  const POLICY=new Date('2026-03-15');
+  const f=w.fields;
+  const t=f['System.WorkItemType']||'';
+  const isUS=t==='User Story';
+  const isTask=t==='Task';
+  const created=new Date(f['System.CreatedDate']||0);
+  const postPolicy=created>=POLICY;
+  const hasAC=(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length>10;
+  const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').trim().length;
+  const noDesc=descLen<20;
+  const hasEstimate=isTask
+    ? (f['Microsoft.VSTS.Scheduling.OriginalEstimate']>0||f['Microsoft.VSTS.Scheduling.RemainingWork']>0)
+    : !!f['Microsoft.VSTS.Scheduling.StoryPoints'];
   const issues=[];const suggestions=[];
-  if(noAC&&t==='User Story'){issues.push('No acceptance criteria');suggestions.push('Add acceptance criteria: "Given [context], When [action], Then [outcome]".');}
-  if(noDesc){issues.push('Description too short');suggestions.push('Expand the description to include what the user needs, why, and any constraints.');}
-  if(noPts){
-    issues.push(isTaskType?'No estimated hours':'No story points');
-    suggestions.push(isTaskType
-      ?'Set Original Estimate in hours on this task so sprint capacity can be tracked.'
-      :'Estimate this item in story points for velocity tracking.');
+  if(isUS&&!hasAC&&postPolicy){issues.push('No acceptance criteria');suggestions.push('Add acceptance criteria: "Given [context], When [action], Then [outcome]".');}
+  if(noDesc&&postPolicy){issues.push('Description missing');suggestions.push('Add a description explaining what needs to be done and why.');}
+  if(!hasEstimate&&postPolicy){
+    issues.push(isTask?'No estimated hours':'No story points');
+    suggestions.push(isTask?'Set Original Estimate in hours on this task.':'Estimate this item in story points.');
   }
   const score=Math.max(0,100-issues.length*30);
   const overall=issues.length===0?'This item looks good.':issues.length===1?'Minor issue found.':'Multiple quality issues.';
@@ -1104,44 +1144,95 @@ function getQualityFeedback(w){
 
 function renderQuality(){
   const POLICY=new Date('2026-03-15');
-  // Only check items created on or after policy date
+
+  // Items to check: User Stories and Tasks, not done, created after policy date
   const items=allWI.filter(w=>{
     const t=w.fields['System.WorkItemType']||'';
     const created=new Date(w.fields['System.CreatedDate']||0);
-    if(created<POLICY)return false; // pre-policy: skip
-    if(qualityTabFilter==='User Story')return t==='User Story'&&!isDone(w.fields);
-    if(qualityTabFilter==='Task')return t==='Task'&&!isDone(w.fields);
-    return(t==='User Story'||t==='Task')&&!isDone(w.fields);
+    if(created<POLICY)return false;
+    if(isDone(w.fields))return false;
+    if(qualityTabFilter==='User Story')return t==='User Story';
+    if(qualityTabFilter==='Task')return t==='Task';
+    return t==='User Story'||t==='Task';
   });
+
+  // Flag item if ANY quality check fails
   const low=items.filter(w=>{
-    const f=w.fields;const wt=f['System.WorkItemType']||'';
-    const noAC=!(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10;
-    const noDesc=(f['System.Description']||'').replace(/<[^>]+>/g,'').length<30;
-    const isTaskType=wt==='Task';
-    const hasEstimate=isTaskType
-      ? !!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']||f['Microsoft.VSTS.Scheduling.RemainingWork'])
-      : !!(f['Microsoft.VSTS.Scheduling.StoryPoints']);
-    const noPts=!hasEstimate;
-    return noAC||noDesc||noPts;
+    const f=w.fields;
+    const wt=f['System.WorkItemType']||'';
+    const isUS=wt==='User Story';
+    const isTask=wt==='Task';
+
+    // AC check: User Stories must have acceptance criteria
+    const hasAC=(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length>10;
+    if(isUS&&!hasAC)return true;
+
+    // Story Points: User Stories must have points
+    if(isUS&&!f['Microsoft.VSTS.Scheduling.StoryPoints'])return true;
+
+    // Estimated Hours: Tasks must have original estimate
+    if(isTask&&!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']>0)&&!(f['Microsoft.VSTS.Scheduling.RemainingWork']>0))return true;
+
+    // Description check
+    const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').trim().length;
+    if(descLen<20)return true;
+
+    return false;
   });
-  $('quality-list').innerHTML=low.length?low.slice(0,8).map(w=>{
-    const f=w.fields;const fb=getQualityFeedback(w);
-    const p=getAssignee(f)||'Unassigned';const t=f['System.WorkItemType']||'';
-    const scoreCol=fb.score>=70?'var(--green)':fb.score>=40?'var(--amber)':'var(--red)';
-    const tags=fb.issues.map(i=>'<span class="badge '+(i.includes('No acceptance')?'red':'amber')+'">'+i+'</span>').join('');
-    const sug=fb.suggestions[0]||'';
+
+  if(!low.length){
+    $('quality-list').innerHTML='<div class="empty" style="padding:1.25rem;text-align:center">'
+      +'<div style="font-size:22px;margin-bottom:6px">\u2713</div>'
+      +'<div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div>'
+      +'<div style="font-size:11px;color:var(--text-3)">Good job! All User Stories have Story Points and Acceptance Criteria, and all Tasks have Estimated Hours set.</div>'
+      +'</div>';
+    return;
+  }
+
+  $('quality-list').innerHTML=low.slice(0,10).map(w=>{
+    const f=w.fields;
+    const wt=f['System.WorkItemType']||'';
+    const isUS=wt==='User Story';
+    const isTask=wt==='Task';
+    const assignee=getAssignee(f)||'Unassigned';
+
+    // Build issue tags
+    const issues=[];
+    const hasAC=(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length>10;
+    if(isUS&&!hasAC)issues.push({label:'No acceptance criteria',color:'red'});
+    if(isUS&&!f['Microsoft.VSTS.Scheduling.StoryPoints'])issues.push({label:'No story points',color:'amber'});
+    if(isTask&&!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']>0)&&!(f['Microsoft.VSTS.Scheduling.RemainingWork']>0))issues.push({label:'No estimated hours',color:'amber'});
+    const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').trim().length;
+    if(descLen<20)issues.push({label:'Description missing',color:'amber'});
+
+    const score=Math.max(0,100-issues.length*30);
+    const scoreCol=score>=70?'var(--green)':score>=40?'var(--amber)':'var(--red)';
+
+    // Build suggestion
+    let suggestion='';
+    if(isUS&&!hasAC)suggestion='Add acceptance criteria in "Given / When / Then" format. e.g. Given [context], When [action], Then [outcome].';
+    else if(isUS&&!f['Microsoft.VSTS.Scheduling.StoryPoints'])suggestion='Estimate this User Story in story points before sprint planning.';
+    else if(isTask&&!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']>0))suggestion='Set Original Estimate in hours on this task for sprint capacity tracking.';
+    else if(descLen<20)suggestion='Add a description explaining what needs to be done and why.';
+
     return`<div class="us-item" onclick="openAdo(${w.id})">
-      <div class="us-hdr"><span class="wi-id">#${w.id}</span><span class="tp ${tcls(t)}">${esc(t)}</span>
-      <span style="font-size:11px;font-weight:500;flex:1;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((f['System.Title']||'').slice(0,50))}</span>
-      <span style="font-size:11px;font-weight:600;color:${scoreCol}">${fb.score}%</span>
-      <button class="ado-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599;</button></div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px">${tags||'<span class="badge green">Good</span>'}</div>
-      <div style="font-size:10px;color:var(--text-3)">Assigned to: ${esc(p)}</div>
-      ${fb.issues.length>0?`<div class="us-feedback"><div class="us-fb-label">AI feedback</div>${esc(fb.overall)}</div>
-      ${sug?`<div class="us-suggestion" style="cursor:default"><div class="us-sug-label">&#128161; Suggested fix</div>${esc(sug.slice(0,120))}${sug.length>120?'...':''}</div>`:''}`:''}
+      <div class="us-hdr">
+        <span class="wi-id">#${w.id}</span>
+        <span class="tp ${tcls(wt)}">${esc(wt)}</span>
+        <span style="font-size:11px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((f['System.Title']||'').slice(0,50))}</span>
+        <span style="font-size:11px;font-weight:600;color:${scoreCol};flex-shrink:0">${score}%</span>
+        <button class="ado-btn" style="opacity:1;flex-shrink:0" onclick="openAdo(${w.id},event)">&#8599;</button>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">
+        ${issues.map(i=>'<span class="badge '+i.color+'">'+esc(i.label)+'</span>').join('')}
+      </div>
+      <div style="font-size:10px;color:var(--text-3);margin-bottom:6px">Assigned to: ${esc(assignee)}</div>
+      ${suggestion?`<div class="us-suggestion" style="cursor:default">
+        <div class="us-sug-label">&#128161; Suggested fix</div>
+        ${esc(suggestion)}
+      </div>`:''}
     </div>`;
-  }).join('')+(low.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(low.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All User Stories have Story Points and Acceptance Criteria, and all Tasks have Estimated Hours set.</div></div>';
+  }).join('')+(low.length>10?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(low.length-10)+' more items — refine using the tabs above</div>':'');
 }
 
 function copyText(text,e){

@@ -565,7 +565,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
       <div id="table-area">
         <div class="wi-scroll">
           <table class="wi">
-            <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>State</th><th>Pts</th><th>Sprint</th><th>Assigned To</th><th>Created By</th></tr></thead>
+            <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>State</th><th>Pts / Hrs</th><th>Sprint</th><th>Assigned To</th><th>Created By</th></tr></thead>
             <tbody id="wi-tbody"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
           </table>
         </div>
@@ -1468,7 +1468,7 @@ function renderWITable(items){
       <td class="wi-id-c">#${w.id}</td><td><span class="tp ${t}">${esc(f['System.WorkItemType']||'')}</span></td>
       <td><span class="wi-title-c" title="${title}">${title}</span></td>
       <td><span class="sp ${s}">${esc(f['System.State']||'')}</span></td>
-      <td>${pts!=null?'<span class="pts-b">'+pts+'</span>':'<span style="color:var(--text-3)">\u2014</span>'}</td>
+      <td>${(function(){var isTask=(f['System.WorkItemType']||'')==='Task';var hrs=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];var sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];if(isTask&&hrs>0)return'<span class="pts-b">'+hrs+'h</span>';if(!isTask&&sp!=null)return'<span class="pts-b">'+sp+'pts</span>';return'<span style="color:var(--text-3)">—</span>';})()}</td>
       <td style="font-family:var(--mono);font-size:10px;color:var(--text-3)">${esc(iter)}</td>
       <td style="font-size:11px;color:var(--text-2)">${esc(assignee)}</td>
       <td style="font-size:11px;color:var(--text-2)">${esc(creator)}</td></tr>`;

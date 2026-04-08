@@ -613,6 +613,44 @@ let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='ta
 let qualityTabFilter='all', clarityTabFilter='all';
 let isFurqanMode=false, masterData={}, masterFilter='all';
 
+// Get the best available estimate from a work item's fields
+// ADO uses different field names depending on process template:
+// - Agile:  StoryPoints (US), OriginalEstimate (Task)
+// - Scrum:  Effort (US/PBI), OriginalEstimate (Task)
+// - CMMI:   Size (US), OriginalEstimate (Task)
+function getEstimate(f){
+  const wt=(f['System.WorkItemType']||'').toLowerCase();
+  const isTask=wt==='task';
+  if(isTask){
+    // Tasks always use OriginalEstimate
+    const oe=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];
+    if(oe!==null&&oe!==undefined&&oe!=='')return Number(oe)||0;
+    return 0;
+  }
+  // User Stories / PBIs / Features — check all possible fields
+  const sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];
+  if(sp!==null&&sp!==undefined&&sp!=='')return Number(sp)||0;
+  const effort=f['Microsoft.VSTS.Scheduling.Effort'];
+  if(effort!==null&&effort!==undefined&&effort!=='')return Number(effort)||0;
+  const size=f['Microsoft.VSTS.Scheduling.Size'];
+  if(size!==null&&size!==undefined&&size!=='')return Number(size)||0;
+  return 0;
+}
+
+// Get hours estimate for a task (original estimate hours)
+function getTaskHours(f){
+  const oe=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];
+  if(oe!==null&&oe!==undefined&&oe!=='')return Number(oe)||0;
+  return 0;
+}
+
+// Check if a work item has any estimate set
+function hasAnyEstimate(f){
+  const wt=(f['System.WorkItemType']||'').toLowerCase();
+  if(wt==='task') return getTaskHours(f)>0;
+  return getEstimate(f)>0;
+}
+
 const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];
 const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Other':'#888780'};
 
@@ -765,7 +803,7 @@ async function loadWorkItems(p){
   const wr=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/wiql?api-version=7.1&$top=500',{method:'POST',body:JSON.stringify(wiql)});
   const ids=(wr.workItems||[]).map(w=>w.id).slice(0,500);
   if(!ids.length)return[];
-  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.RemainingWork,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Common.StateChangeDate,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
+  const fields='System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.CreatedBy,System.IterationPath,Microsoft.VSTS.Scheduling.StoryPoints,Microsoft.VSTS.Scheduling.OriginalEstimate,Microsoft.VSTS.Scheduling.RemainingWork,Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.Effort,Microsoft.VSTS.Scheduling.Size,Microsoft.VSTS.Common.StateChangeDate,System.ChangedDate,System.CreatedDate,Microsoft.VSTS.Common.AcceptanceCriteria,System.Description,System.CommentCount';
   let all=[];
   for(let i=0;i<ids.length;i+=200){
     const d=await adoFetch(ORG+'/'+encodeURIComponent(p)+'/_apis/wit/workitems?ids='+ids.slice(i,i+200).join(',')+'&fields='+fields+'&api-version=7.1');
@@ -1034,18 +1072,14 @@ function renderDelayed(){
     const hoursElapsed=(now-inProgressSince)/3600000;
 
     if(t==='Task'){
-      // Task: delayed if hours elapsed > Original Estimate
-      const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
-      if(orig<=0)return false; // no estimate = can't calculate
+      const orig=getTaskHours(f);
+      if(orig<=0)return false;
       return hoursElapsed>orig;
     }
-
-    if(t==='User Story'){
-      // User Story: delayed if hours elapsed > StoryPoints * HOURS_PER_POINT
-      const pts=parseFloat(f['Microsoft.VSTS.Scheduling.StoryPoints'])||0;
-      if(pts<=0)return false; // no points = can't calculate
-      const estimatedHours=pts*HOURS_PER_POINT;
-      return hoursElapsed>estimatedHours;
+    if(t==='User Story'||t==='Product Backlog Item'||t==='Requirement'){
+      const pts=getEstimate(f);
+      if(pts<=0)return false;
+      return hoursElapsed>(pts*HOURS_PER_POINT);
     }
 
     return false;
@@ -1186,11 +1220,8 @@ function renderQuality(){
     const hasAC=(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length>10;
     if(isUS&&!hasAC)return true;
 
-    // Story Points: User Stories must have points
-    if(isUS&&!f['Microsoft.VSTS.Scheduling.StoryPoints'])return true;
-
-    // Estimated Hours: Tasks must have original estimate
-    if(isTask&&!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']>0)&&!(f['Microsoft.VSTS.Scheduling.RemainingWork']>0))return true;
+    // Check estimation using unified helper
+    if(!hasAnyEstimate(f))return true;
 
     // Description check
     const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').trim().length;
@@ -1428,13 +1459,10 @@ function renderHealth(){
   // Policy-gated checks — only items created >= March 15 2026
   const policyActive=active.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
   const policyStories=policyActive.filter(w=>isStory(w.fields));
-  const storiesWithPts=policyStories.filter(w=>w.fields['Microsoft.VSTS.Scheduling.StoryPoints']>0).length;
+  const storiesWithPts=policyStories.filter(w=>getEstimate(w.fields)>0).length;
   const storyPtsPct=policyStories.length>0?Math.round(storiesWithPts/policyStories.length*100):100;
   const policyTasks=policyActive.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  const tasksWithEst=policyTasks.filter(w=>
-    (w.fields['Microsoft.VSTS.Scheduling.OriginalEstimate']||0)>0||
-    (w.fields['Microsoft.VSTS.Scheduling.RemainingWork']||0)>0
-  ).length;
+  const tasksWithEst=policyTasks.filter(w=>hasAnyEstimate(w.fields)).length;
   const taskEstPct=policyTasks.length>0?Math.round(tasksWithEst/policyTasks.length*100):100;
   const allPolicyStories=allWI.filter(w=>isStory(w.fields)&&new Date(w.fields['System.CreatedDate']||0)>=POLICY);
   const withAC=allPolicyStories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
@@ -1464,23 +1492,32 @@ function renderHealth(){
 
 function renderWITable(items){
   const tb=$('wi-tbody');
-  if(!items.length){tb.innerHTML='<tr><td colspan="8" class="empty">No items found.</td></tr>';$('wi-count').textContent='';return;}
+  if(!items.length){
+    tb.innerHTML='<tr><td colspan="8" class="empty">No items found.</td></tr>';
+    $('wi-count').textContent='';
+    return;
+  }
   tb.innerHTML=items.map(w=>{
     const f=w.fields;
     const wt=f['System.WorkItemType']||'';
+    const isTask=wt==='Task';
     const t=tcls(wt);
     const s=scls(f['System.State']);
-    const isTask=wt==='Task';
-    const hrs=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
-    const sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];
     const assignee=getAssignee(f)||'\u2014';
     const creator=getCreator(f);
     const iter=getIterShort(f)||'\u2014';
     const title=esc((f['System.Title']||'\u2014').slice(0,60));
-    // Pts/Hrs: show hours for Tasks, story points for User Stories, dash for others
+
+    // Use the unified getEstimate/getTaskHours helpers
     let ptsCell='<span style="color:var(--text-3)">\u2014</span>';
-    if(isTask&&hrs>0)ptsCell='<span class="pts-b">'+hrs+'h</span>';
-    else if(!isTask&&sp!=null&&sp!=='')ptsCell='<span class="pts-b">'+sp+'pts</span>';
+    if(isTask){
+      const hrs=getTaskHours(f);
+      if(hrs>0)ptsCell='<span class="pts-b">'+hrs+'h</span>';
+    } else {
+      const est=getEstimate(f);
+      if(est>0)ptsCell='<span class="pts-b">'+est+'pts</span>';
+    }
+
     return`<tr onclick="openAdo(${w.id})">
       <td class="wi-id-c">#${w.id}</td>
       <td><span class="tp ${t}">${esc(wt)}</span></td>
@@ -1493,6 +1530,11 @@ function renderWITable(items){
     </tr>`;
   }).join('');
   $('wi-count').textContent='Showing '+items.length+' items';
+}
+
+// Helper — is this work item type a story type
+function isStory_wt(wt){
+  return (wt||'').toLowerCase().includes('story');
 }
 
 function switchView(v,btn){
@@ -1757,11 +1799,8 @@ function masterStats(d){
   const policyActive=notDone.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
   const policyUS=policyActive.filter(w=>isStory(w.fields));
   const policyTasks=policyActive.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  const unestimatedUS=policyUS.filter(w=>!w.fields['Microsoft.VSTS.Scheduling.StoryPoints']);
-  const unestimatedTasks=policyTasks.filter(w=>
-    !(w.fields['Microsoft.VSTS.Scheduling.OriginalEstimate']>0)&&
-    !(w.fields['Microsoft.VSTS.Scheduling.RemainingWork']>0)
-  );
+  const unestimatedUS=policyUS.filter(w=>!hasAnyEstimate(w.fields));
+  const unestimatedTasks=policyTasks.filter(w=>!hasAnyEstimate(w.fields));
   const policyEstimatable=policyUS.length+policyTasks.length;
   const unestimatedCount=unestimatedUS.length+unestimatedTasks.length;
   const unestPct=policyEstimatable>0?Math.round(unestimatedCount/policyEstimatable*100):0;

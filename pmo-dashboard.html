@@ -793,7 +793,11 @@ async function loadDashboard(project){
   hideErr();selectedSprintIdx=null;
   try{
     const[iterations,workItems]=await Promise.all([loadIterations(project),loadWorkItems(project)]);
-    allIterations=iterations;allWI=workItems;currentWI=workItems;
+    allIterations=iterations;
+    // Filter out Issue types — they don't have estimates/AC and pollute all stats
+    const EXCLUDED_TYPES=['Issue','Impediment','Test Plan','Test Suite','Test Case'];
+    allWI=workItems.filter(w=>!EXCLUDED_TYPES.includes(w.fields['System.WorkItemType']||''));
+    currentWI=allWI;
     renderAll();
     setStatus('','Live \u00b7 '+project+' \u00b7 '+workItems.length+' items');
     $('sdot').className='sdot';
@@ -1769,7 +1773,8 @@ async function loadMasterDashboard(){
         const pr=await fetch(ORG+'/'+encodeURIComponent(proj.name)+'/_apis/work/plans?api-version=7.1',{headers:{Authorization:pAuth,'Content-Type':'application/json'}});
         if(pr.ok){const pd=await pr.json();plans=pd.value||[];}
       }catch{}
-      masterData[proj.id]={proj,allWI:wis||[],allIterations:iters||[],plans};
+      const EXCL=['Issue','Impediment','Test Plan','Test Suite','Test Case'];
+      masterData[proj.id]={proj,allWI:(wis||[]).filter(w=>!EXCL.includes(w.fields['System.WorkItemType']||'')),allIterations:iters||[],plans};
     }catch(e){
       console.warn('Failed:',proj.name,e.message);
       masterData[proj.id]={proj,allWI:[],allIterations:[],plans:[]};

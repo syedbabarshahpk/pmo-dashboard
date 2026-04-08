@@ -1017,7 +1017,7 @@ function renderDelayedStale(){
       <span class="badge ${d>5?'red':'amber'}">${d}d late</span><span class="wi-person">${esc(p)}</span>
       <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button></div>`;
   }).join('')+(allDelayed.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allDelayed.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1rem">No delayed tasks</div>';
+  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! No delayed tasks detected.</div></div>';
 
   const allStale=getStale().filter(w=>(w.fields['System.WorkItemType']||'')==='Task'&&isActive(w.fields));
   $('stale-list').innerHTML=allStale.length?allStale.slice(0,8).map(w=>{
@@ -1027,7 +1027,7 @@ function renderDelayedStale(){
       <span class="badge ${d>10?'red':'amber'}">${d}d silent</span><span class="wi-person">${esc(p)}</span>
       <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button></div>`;
   }).join('')+(allStale.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allStale.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1rem">No stale in-progress tasks</div>';
+  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All tasks have been updated recently.</div></div>';
 }
 
 function setQualityTab(type,btn){
@@ -1042,16 +1042,18 @@ function getQualityFeedback(w){
   const descLen=(f['System.Description']||'').replace(/<[^>]+>/g,'').length;
   const noDesc=descLen<30;
   const isTaskType=t==='Task';
-  const noPts=isTaskType
-    ? !f['Microsoft.VSTS.Scheduling.OriginalEstimate']&&!f['Microsoft.VSTS.Scheduling.RemainingWork']
-    : !f['Microsoft.VSTS.Scheduling.StoryPoints'];
+  // Tasks use OriginalEstimate or RemainingWork — treated same as story points
+  const hasEstimate=isTaskType
+    ? !!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']||f['Microsoft.VSTS.Scheduling.RemainingWork'])
+    : !!(f['Microsoft.VSTS.Scheduling.StoryPoints']);
+  const noPts=!hasEstimate;
   const issues=[];const suggestions=[];
   if(noAC&&t==='User Story'){issues.push('No acceptance criteria');suggestions.push('Add acceptance criteria: "Given [context], When [action], Then [outcome]".');}
   if(noDesc){issues.push('Description too short');suggestions.push('Expand the description to include what the user needs, why, and any constraints.');}
   if(noPts){
     issues.push(isTaskType?'No estimated hours':'No story points');
     suggestions.push(isTaskType
-      ?'Set Original Estimate in hours so sprint capacity can be tracked.'
+      ?'Set Original Estimate in hours on this task so sprint capacity can be tracked.'
       :'Estimate this item in story points for velocity tracking.');
   }
   const score=Math.max(0,100-issues.length*30);
@@ -1071,9 +1073,10 @@ function renderQuality(){
     const noAC=!(f['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10;
     const noDesc=(f['System.Description']||'').replace(/<[^>]+>/g,'').length<30;
     const isTaskType=wt==='Task';
-    const noPts=isTaskType
-      ? !f['Microsoft.VSTS.Scheduling.OriginalEstimate']&&!f['Microsoft.VSTS.Scheduling.RemainingWork']
-      : !f['Microsoft.VSTS.Scheduling.StoryPoints'];
+    const hasEstimate=isTaskType
+      ? !!(f['Microsoft.VSTS.Scheduling.OriginalEstimate']||f['Microsoft.VSTS.Scheduling.RemainingWork'])
+      : !!(f['Microsoft.VSTS.Scheduling.StoryPoints']);
+    const noPts=!hasEstimate;
     return noAC||noDesc||noPts;
   });
   $('quality-list').innerHTML=low.length?low.slice(0,8).map(w=>{
@@ -1093,7 +1096,7 @@ function renderQuality(){
       ${sug?`<div class="us-suggestion" onclick="copyText('${sug.replace(/'/g,"\\'").replace(/\n/g,' ')}',event)"><div class="us-sug-label">&#128203; Suggested fix \u2014 click to copy</div>${esc(sug.slice(0,120))}${sug.length>120?'...':''}</div>`:''}`:''}
     </div>`;
   }).join('')+(low.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(low.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1rem">All items look good</div>';
+  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All items in this section are well-formed.</div></div>';
 }
 
 function copyText(text,e){
@@ -1136,7 +1139,7 @@ function renderClarity(){
       ${isBlocking?`<div style="background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--red);border-left:2px solid var(--red)">No response for ${daysOld} days \u2014 this may be blocking the developer.</div>`:''}
     </div></div>`;
   }).join('')+(items.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(items.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1rem">No open comment threads found</div>';
+  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! No unanswered comment threads detected.</div></div>';
 }
 
 function renderWorkload(){

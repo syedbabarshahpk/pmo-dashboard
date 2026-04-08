@@ -683,6 +683,33 @@ function getIterShort(f){return(f['System.IterationPath']||'').split('\\').pop()
 function adoUrl(id){return ORG+'/'+encodeURIComponent(currentProject)+'/_workitems/edit/'+id;}
 function openAdo(id,e){if(e)e.stopPropagation();window.open(adoUrl(id),'_blank');}
 function showModal(title,body){$('modal-title').textContent=title;$('modal-body').innerHTML='<p>'+body+'</p>';$('modal-ov').classList.add('open');}
+
+function showItemList(title,items,emptyMsg){
+  $('modal-title').textContent=title;
+  if(!items||!items.length){
+    $('modal-body').innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--green)"><div style="font-size:24px;margin-bottom:8px">\u2713</div><div style="font-weight:600;margin-bottom:4px">All good!</div><div style="font-size:12px;color:var(--text-3)">'+(emptyMsg||'No items need attention here.')+'</div></div>';
+    $('modal-ov').classList.add('open');
+    return;
+  }
+  const rows=items.slice(0,30).map(function(w){
+    const f=w.fields||{};
+    const id=w.id;
+    const ttl=esc((f['System.Title']||'').slice(0,55));
+    const wt=f['System.WorkItemType']||'';
+    const assignee=getAssignee(f)||'Unassigned';
+    const state=f['System.State']||'';
+    return '<div class="linked-row" onclick="openAdo('+id+')" style="padding:8px 4px;gap:8px">'
+      +'<span class="wi-id" style="min-width:40px">#'+id+'</span>'
+      +(wt?'<span class="tp '+tcls(wt)+'">'+esc(wt)+'</span>':'')
+      +'<span style="font-size:12px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ttl+'</span>'
+      +(state?'<span class="sp '+scls(state)+'" style="flex-shrink:0">'+esc(state)+'</span>':'')
+      +'<span style="font-size:11px;color:var(--text-2);flex-shrink:0;white-space:nowrap">'+esc(assignee)+'</span>'
+      +'<button class="ado-btn" style="opacity:1;flex-shrink:0" onclick="openAdo('+id+',event)">&#8599;</button>'
+      +'</div>';
+  }).join('');
+  $('modal-body').innerHTML='<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">'+items.length+' item'+(items.length!==1?'s':'')+' need attention'+(items.length>30?' \u00b7 showing first 30':'')+'. Click any to open in ADO.</div>'+rows;
+  $('modal-ov').classList.add('open');
+}
 function tcls(t){if(!t)return'other';const l=t.toLowerCase();if(l.includes('story'))return'story';if(l.includes('bug'))return'bug';if(l.includes('task'))return'task';if(l.includes('epic'))return'epic';if(l.includes('feature'))return'feature';return'other';}
 function scls(s){if(!s)return'new';const l=s.toLowerCase();if(['active','in progress','doing','committed'].includes(l))return'active';if(['resolved','closed','done','completed'].includes(l))return'resolved';if(l==='closed')return'closed';return'new';}
 
@@ -861,26 +888,50 @@ function renderAlarm(){
 
 function renderKPIs(){
   const POLICY=new Date('2026-03-10');
-  const delayed=getDelayed().length;
-  const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
-  const noReporter=allWI.filter(w=>!w.fields['System.CreatedBy']).length;
+  const delayedItems=getDelayed();
+  const unassignedItems=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
+  const noReporterItems=allWI.filter(w=>!w.fields['System.CreatedBy']&&!isDone(w.fields));
   const done=allWI.filter(w=>isDone(w.fields)).length;
   const total=allWI.length||1;
   const pct=Math.round(done/total*100);
-  // Quality: only items created after policy date
-  const policyItems=allWI.filter(w=>new Date(w.fields['System.CreatedDate'])>=POLICY);
+  const policyItems=allWI.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
   const stories=policyItems.filter(w=>isStory(w.fields));
-  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
-  const qPct=stories.length>0?Math.round(withAC/stories.length*100):100;
-  $('k-delayed').textContent=delayed;
-  $('k-unassigned').textContent=unassigned;
-  $('k-noreporter').textContent=noReporter;
+  const storiesNoAC=stories.filter(w=>!isDone(w.fields)&&(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length<=10);
+  const qPct=stories.length>0?Math.round((stories.length-storiesNoAC.length)/stories.length*100):100;
+
+  // Store for click handlers
+  window._kpiItems={
+    delayed: delayedItems,
+    unassigned: unassignedItems,
+    noreporter: noReporterItems,
+    quality: storiesNoAC,
+  };
+
+  $('k-delayed').textContent=delayedItems.length;
+  $('k-unassigned').textContent=unassignedItems.length;
+  $('k-noreporter').textContent=noReporterItems.length;
   $('k-completion').textContent=pct+'%';
   $('k-completion-s').textContent=done+' of '+total+' done';
   $('k-quality').textContent=qPct+'%';
   const qc=$('kpi-quality');
   qc.className='kpi '+(qPct<50?'red':qPct<75?'amber':'green');
   $('k-quality').className='kv '+(qPct<50?'red':qPct<75?'amber':'green');
+
+  // Make KPI cards clickable to show drill-down
+  const kpiClicks={
+    'k-delayed': ['Delayed Items','delayed','Items past their sprint end date'],
+    'k-unassigned': ['Unassigned Items','unassigned','Active items with no owner assigned'],
+    'k-noreporter': ['No Reporter Items','noreporter','Items with no Created By field'],
+    'k-quality': ['Missing Acceptance Criteria','quality','User Stories without acceptance criteria (post Mar 10)'],
+  };
+  Object.entries(kpiClicks).forEach(([id,[title,key,empty]])=>{
+    const el=$(id);
+    if(!el)return;
+    const card=el.closest('.kpi');
+    if(!card)return;
+    card.style.cursor='pointer';
+    card.onclick=()=>showItemList(title, window._kpiItems[key], empty);
+  });
 }
 
 function renderSprintTimeline(){
@@ -1468,42 +1519,97 @@ function renderHealth(){
   const POLICY=new Date('2026-03-10');
   const active=allWI.filter(w=>!isDone(w.fields));
   const tot=active.length||1;
-  const withA=active.filter(w=>getAssignee(w.fields)).length;
-  const withR=active.filter(w=>w.fields['System.CreatedBy']).length;
-  const inSpr=active.filter(w=>getIterShort(w.fields)!=='').length;
-  const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7).length;
-  // Policy-gated checks — only items created >= March 15 2026
+
+  // ── Basic checks (all items) ──
+  const noAssignee=active.filter(w=>!getAssignee(w.fields));
+  const noReporter=active.filter(w=>!w.fields['System.CreatedBy']);
+  const noSprint=active.filter(w=>!getIterShort(w.fields));
+  const notUpdated=active.filter(w=>daysSince(w.fields['System.ChangedDate'])>7);
+
+  // ── Policy-gated checks ──
   const policyActive=active.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
   const policyStories=policyActive.filter(w=>isStory(w.fields));
-  const storiesWithPts=policyStories.filter(w=>getEstimate(w.fields)>0).length;
-  const storyPtsPct=policyStories.length>0?Math.round(storiesWithPts/policyStories.length*100):100;
   const policyTasks=policyActive.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  const tasksWithEst=policyTasks.filter(w=>hasAnyEstimate(w.fields)).length;
-  const taskEstPct=policyTasks.length>0?Math.round(tasksWithEst/policyTasks.length*100):100;
-  const allPolicyStories=allWI.filter(w=>isStory(w.fields)&&new Date(w.fields['System.CreatedDate']||0)>=POLICY);
-  const withAC=allPolicyStories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
-  const acPct=allPolicyStories.length>0?Math.round(withAC/allPolicyStories.length*100):100;
-  const suffix=' (post Mar\u00a015)';
+
+  const storiesNoPoints=policyStories.filter(w=>!hasAnyEstimate(w.fields));
+  const tasksNoHours=policyTasks.filter(w=>!hasAnyEstimate(w.fields));
+  const storiesNoAC=allWI.filter(w=>isStory(w.fields)&&new Date(w.fields['System.CreatedDate']||0)>=POLICY&&!isDone(w.fields)&&(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length<=10);
+
+  const storyPtsPct=policyStories.length>0?Math.round((policyStories.length-storiesNoPoints.length)/policyStories.length*100):100;
+  const taskEstPct=policyTasks.length>0?Math.round((policyTasks.length-tasksNoHours.length)/policyTasks.length*100):100;
+  const acPct=storiesNoAC.length>0&&policyStories.length>0?Math.round((policyStories.length-storiesNoAC.length)/policyStories.length*100):100;
+  const suffix=' (post Mar\u00a010)';
+
   const checks=[
-    {l:'Assignee set',p:Math.round(withA/tot*100),fix:'Filter by Unassigned in ADO Backlog and assign each item. Target: 100%.'},
-    {l:'Has reporter',p:Math.round(withR/tot*100),fix:'Ensure items are created while logged in to ADO with the correct user.'},
-    {l:'In a sprint',p:Math.round(inSpr/tot*100),fix:'Drag unassigned backlog items into upcoming sprints during planning.'},
-    {l:'Updated this week',p:Math.round(updW/tot*100),fix:'Enforce daily ADO updates in standup. Every active item needs a state change or comment. Target: 90%+.'},
-    {l:'User Stories have story points'+suffix+(policyStories.length>0?' ('+policyStories.length+')':''),p:storyPtsPct,fix:'Open ADO Backlog, filter by User Story, sort by Story Points. Estimate any missing ones before the next sprint planning.'},
-    {l:'Tasks have estimated hours'+suffix+(policyTasks.length>0?' ('+policyTasks.length+')':''),p:taskEstPct,fix:'Open each Task in ADO and set Original Estimate in hours. Required for sprint capacity planning.'},
-    {l:'User Stories have acceptance criteria'+suffix+(allPolicyStories.length>0?' ('+allPolicyStories.length+')':''),p:acPct,fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.'},
+    {
+      l:'Assignee set',
+      p:Math.round((active.length-noAssignee.length)/tot*100),
+      items:noAssignee,
+      fix:'Filter by Unassigned in ADO Backlog and assign each item.',
+      emptyMsg:'All active items have an assignee.'
+    },
+    {
+      l:'Has reporter',
+      p:Math.round((active.length-noReporter.length)/tot*100),
+      items:noReporter,
+      fix:'Ensure items are created while logged in to ADO with the correct user.',
+      emptyMsg:'All active items have a reporter.'
+    },
+    {
+      l:'In a sprint',
+      p:Math.round((active.length-noSprint.length)/tot*100),
+      items:noSprint,
+      fix:'Drag unassigned backlog items into upcoming sprints during planning.',
+      emptyMsg:'All active items are assigned to a sprint.'
+    },
+    {
+      l:'Updated this week',
+      p:Math.round((active.length-notUpdated.length)/tot*100),
+      items:notUpdated,
+      fix:'Enforce daily ADO updates in standup. Every active item needs a state change or comment.',
+      emptyMsg:'All active items have been updated this week.'
+    },
+    {
+      l:'User Stories have story points'+suffix,
+      p:storyPtsPct,
+      items:storiesNoPoints,
+      fix:'Estimate any User Stories missing story points before the next sprint planning.',
+      emptyMsg:'All post-Mar 10 User Stories have story points.'
+    },
+    {
+      l:'Tasks have estimated hours'+suffix,
+      p:taskEstPct,
+      items:tasksNoHours,
+      fix:'Open each Task in ADO and set Original Estimate in hours.',
+      emptyMsg:'All post-Mar 10 Tasks have estimated hours.'
+    },
+    {
+      l:'User Stories have acceptance criteria'+suffix,
+      p:acPct,
+      items:storiesNoAC,
+      fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.',
+      emptyMsg:'All post-Mar 10 User Stories have acceptance criteria.'
+    },
   ];
-  $('health-list').innerHTML=checks.map(c=>{
-    const col=c.p>=80?'var(--green)':c.p>=60?'var(--amber)':'var(--red)';
+
+  $('health-list').innerHTML=checks.map(ch=>{
+    const col=ch.p>=80?'var(--green)':ch.p>=60?'var(--amber)':'var(--red)';
+    const needsWork=ch.p<100;
+    const itemCount=ch.items?ch.items.length:0;
     return`<div class="health-row">
       <div class="health-top">
-        <span class="hl">${c.l}</span>
-        <div class="ht"><div class="hf" style="width:${c.p}%;background:${col}"></div></div>
-        <span class="hp" style="color:${col}">${c.p}%</span>
+        <span class="hl">${ch.l}</span>
+        <div class="ht"><div class="hf" style="width:${ch.p}%;background:${col}"></div></div>
+        <span class="hp" style="color:${col}">${ch.p}%</span>
+        ${needsWork&&itemCount>0?`<button onclick="showItemList('${esc(ch.l)} \u2014 Items to fix',window._healthItems&&window._healthItems['${ch.l}'],${JSON.stringify(ch.emptyMsg)})" style="font-family:var(--font);font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid ${col};background:transparent;color:${col};cursor:pointer;white-space:nowrap;margin-left:4px">${itemCount} to fix \u2192</button>`:''}
       </div>
-      ${c.p<80?`<div class="health-tip"><div class="health-tip-label">How to improve</div>${esc(c.fix)}</div>`:''}
+      ${ch.p<100?`<div class="health-tip"><div class="health-tip-label">How to improve</div>${esc(ch.fix)}</div>`:''}
     </div>`;
   }).join('');
+
+  // Store items for the modal (can't serialize functions in onclick)
+  window._healthItems={};
+  checks.forEach(ch=>{ if(ch.items) window._healthItems[ch.l]=ch.items; });
 }
 
 function renderWITable(items){

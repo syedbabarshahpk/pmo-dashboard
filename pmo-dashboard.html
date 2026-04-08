@@ -397,6 +397,17 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 .dp-plan-chip:hover{background:#C0E8E0;}
 .dp-plan-chip-name{font-size:11px;font-weight:500;color:var(--teal);}
 .dp-plan-chip-icon{font-size:10px;color:var(--teal);}
+.mf-pill{font-size:11px;font-weight:500;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border-mid);background:var(--surface);color:var(--text-2);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.mf-pill:hover{border-color:var(--teal);color:var(--teal);}
+.mf-pill.active{color:#fff;border-color:transparent;}
+.mf-pill.active.all{background:var(--teal);}
+.mf-pill.active.red{background:var(--red);}
+.mf-pill.active.amber{background:var(--amber);}
+.mf-pill.active.blue{background:var(--blue);}
+.mf-pill.active.green{background:var(--green);}
+.mf-pill.active.purple{background:var(--purple);}
+.mf-pill-count{font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:rgba(0,0,0,.08);}
+.mf-pill.active .mf-pill-count{background:rgba(255,255,255,.25);}
 </style>
 </head>
 <body>
@@ -600,7 +611,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 let ORG='', AUTH='', currentProject='', allProjects=[], allWI=[], allIterations=[];
 let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='table', currentWI=[];
 let qualityTabFilter='all', clarityTabFilter='all';
-let isFurqanMode=false, masterData={};
+let isFurqanMode=false, masterData={}, masterFilter='all';
 
 const COLORS=['#0D6E6E','#185FA5','#534AB7','#3B6D11','#B07400','#A32D2D','#0F6E56','#854F0B'];
 const TYPE_COLORS={'User Story':'#185FA5','Bug':'#A32D2D','Task':'#B07400','Epic':'#534AB7','Feature':'#0D6E6E','Other':'#888780'};
@@ -797,7 +808,7 @@ function renderAlarm(){
 }
 
 function renderKPIs(){
-  const POLICY=new Date('2026-03-15');
+  const POLICY=new Date('2026-03-10');
   const delayed=getDelayed().length;
   const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
   const noReporter=allWI.filter(w=>!w.fields['System.CreatedBy']).length;
@@ -1004,7 +1015,7 @@ function renderTaskCards(taskItems,sprintStart){
 
 
 function renderDelayed(){
-  const POLICY=new Date('2026-03-15');
+  const POLICY=new Date('2026-03-10');
   const now=new Date();
 
   // An item is "delayed" if created after policy date AND either:
@@ -1119,7 +1130,7 @@ function setQualityTab(type,btn){
 }
 
 function getQualityFeedback(w){
-  const POLICY=new Date('2026-03-15');
+  const POLICY=new Date('2026-03-10');
   const f=w.fields;
   const t=f['System.WorkItemType']||'';
   const isUS=t==='User Story';
@@ -1145,7 +1156,7 @@ function getQualityFeedback(w){
 }
 
 function renderQuality(){
-  const POLICY=new Date('2026-03-15');
+  const POLICY=new Date('2026-03-10');
 
   // Items to check: User Stories and Tasks, not done, created after policy date
   const items=allWI.filter(w=>{
@@ -1401,7 +1412,7 @@ function renderWorkload(){
 }
 
 function renderHealth(){
-  const POLICY=new Date('2026-03-15');
+  const POLICY=new Date('2026-03-10');
   const active=allWI.filter(w=>!isDone(w.fields));
   const tot=active.length||1;
   const withA=active.filter(w=>getAssignee(w.fields)).length;
@@ -1663,7 +1674,7 @@ async function loadMasterDashboard(){
   $('master-org').textContent=ORG.replace('https://dev.azure.com/','');
   $('master-sdot').className='sdot loading';
   $('master-stext').textContent='Loading '+allProjects.length+' projects...';
-  $('master-alarm').style.display='none';
+  masterFilter='all';
   $('master-kpis').innerHTML='<div style="grid-column:1/-1;padding:1rem;color:var(--text-3);text-align:center">Loading...</div>';
   $('master-proj-grid').innerHTML='<div class="empty">Loading project data...</div>';
   $('master-critical').innerHTML='<div class="empty">Loading...</div>';
@@ -1702,58 +1713,90 @@ async function loadMasterDashboard(){
 }
 
 function masterStats(d){
-  const wi=d.allWI,iters=d.allIterations;const now=new Date();
+  const wi=d.allWI, iters=d.allIterations;
+  const now=new Date();
+  const POLICY=new Date('2026-03-10');
   const total=wi.length||1;
   const done=wi.filter(w=>isDone(w.fields));
   const active=wi.filter(w=>isActive(w.fields));
   const notDone=wi.filter(w=>!isDone(w.fields));
+
   const delayed=wi.filter(w=>{
     if(isDone(w.fields))return false;
     const it=iters.find(it=>it.name===getIterShort(w.fields));
-    return it?.attributes?.finishDate&&new Date(it.attributes.finishDate)<now;
+    return it&&it.attributes&&it.attributes.finishDate&&new Date(it.attributes.finishDate)<now;
   });
   const unassigned=notDone.filter(w=>!getAssignee(w.fields));
-  const stories=wi.filter(w=>isStory(w.fields));
-  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10);
-  const acPct=stories.length>0?Math.round(withAC.length/stories.length*100):100;
-  const unestimated=notDone.filter(w=>!w.fields['Microsoft.VSTS.Scheduling.StoryPoints']);
-  const unestPct=notDone.length>0?Math.round(unestimated.length/notDone.length*100):0;
+
+  // AC coverage — post-policy User Stories only
+  const policyStories=wi.filter(w=>isStory(w.fields)&&new Date(w.fields['System.CreatedDate']||0)>=POLICY);
+  const withAC=policyStories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length>10);
+  const acPct=policyStories.length>0?Math.round(withAC.length/policyStories.length*100):100;
+
+  // No estimate % — post-policy items only, type-aware
+  // User Stories without Story Points + Tasks without Estimated Hours
+  const policyActive=notDone.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
+  const policyUS=policyActive.filter(w=>isStory(w.fields));
+  const policyTasks=policyActive.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const unestimatedUS=policyUS.filter(w=>!w.fields['Microsoft.VSTS.Scheduling.StoryPoints']);
+  const unestimatedTasks=policyTasks.filter(w=>
+    !(w.fields['Microsoft.VSTS.Scheduling.OriginalEstimate']>0)&&
+    !(w.fields['Microsoft.VSTS.Scheduling.RemainingWork']>0)
+  );
+  const policyEstimatable=policyUS.length+policyTasks.length;
+  const unestimatedCount=unestimatedUS.length+unestimatedTasks.length;
+  const unestPct=policyEstimatable>0?Math.round(unestimatedCount/policyEstimatable*100):0;
+
+  // ADO update rate
   const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7);
   const updateRate=active.length>0?Math.round(updW.length/active.length*100):100;
+
   const completionPct=Math.round(done.length/total*100);
+
+  // Current sprint
   const curIter=iters.find(it=>{
-    const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
-    const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
     return s&&e&&now>=s&&now<=e;
   })||iters[iters.length-1]||null;
   const sprintItems=curIter?wi.filter(w=>getIterShort(w.fields)===curIter.name):[];
   const sprintDone=sprintItems.filter(w=>isDone(w.fields));
   const sprintPct=sprintItems.length>0?Math.round(sprintDone.length/sprintItems.length*100):0;
+
+  // Velocity from last completed sprint
   let velocity=0;
-  const completed=iters.filter(it=>it.attributes?.finishDate&&new Date(it.attributes.finishDate)<now);
+  const completed=iters.filter(it=>it.attributes&&it.attributes.finishDate&&new Date(it.attributes.finishDate)<now);
   if(completed.length>0){
     const last=completed[completed.length-1];
-    velocity=wi.filter(w=>getIterShort(w.fields)===last.name&&isDone(w.fields)).reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+    velocity=wi.filter(w=>getIterShort(w.fields)===last.name&&isDone(w.fields))
+      .reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
   }
+
+  // Scope creep
   let scopeCreep=0;
   iters.forEach(it=>{
-    const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
-    const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
     if(!s||!e||now<s||now>e)return;
     scopeCreep+=wi.filter(w=>getIterShort(w.fields)===it.name&&w.fields['System.CreatedDate']&&new Date(w.fields['System.CreatedDate'])>s).length;
   });
-  let score=100;const reasons=[];
-  if(delayed.length){const d=Math.min(20,delayed.length*2);score-=d;reasons.push('-'+d+' pts \u00b7 '+delayed.length+' tasks past deadline');}
-  if(unassigned.length){const d=Math.min(10,unassigned.length);score-=d;reasons.push('-'+d+' pts \u00b7 '+unassigned.length+' items unassigned');}
+
+  // Health score
+  let score=100; const reasons=[];
+  if(delayed.length){const dd=Math.min(20,delayed.length*2);score-=dd;reasons.push('-'+dd+' pts \u00b7 '+delayed.length+' items past sprint deadline');}
+  if(unassigned.length){const dd=Math.min(10,unassigned.length);score-=dd;reasons.push('-'+dd+' pts \u00b7 '+unassigned.length+' items unassigned');}
   if(acPct<50){score-=20;reasons.push('-20 pts \u00b7 AC coverage below 50%');}
   else if(acPct<75){score-=10;reasons.push('-10 pts \u00b7 AC coverage below 75%');}
   if(updateRate<50){score-=15;reasons.push('-15 pts \u00b7 ADO updates below 50%');}
   else if(updateRate<70){score-=8;reasons.push('-8 pts \u00b7 ADO updates below 70%');}
-  if(unestPct>30){score-=5;reasons.push('-5 pts \u00b7 '+unestPct+'% items unestimated');}
+  if(unestPct>30){score-=5;reasons.push('-5 pts \u00b7 '+unestPct+'% items unestimated (post Mar 15)');}
   if(scopeCreep>3){score-=5;reasons.push('-5 pts \u00b7 '+scopeCreep+' scope creep items');}
   if(!reasons.length)reasons.push('No deductions \u2014 project in good standing');
   score=Math.max(0,Math.min(100,score));
-  return{delayed,unassigned,done:done.length,total,completionPct,acPct,unestPct,updateRate,velocity,scopeCreep,curIter,sprintPct,sprintItems,active,wi,iters,score,reasons};
+
+  return{delayed,unassigned,done:done.length,total,completionPct,
+    acPct,unestPct,updateRate,velocity,scopeCreep,
+    curIter,sprintPct,sprintItems,active,wi,iters,score,reasons};
 }
 
 function getDeliveryPlanBadge(d){
@@ -1779,17 +1822,19 @@ function getDeliveryPlanBadge(d){
 function renderMasterDashboard(){
   const entries=Object.values(masterData);
   if(!entries.length){$('master-proj-grid').innerHTML='<div class="empty">No data loaded.</div>';return;}
+
   const all=entries.map(d=>({...d,s:masterStats(d)}));
   all.sort((a,b)=>b.s.score-a.s.score);
+
+  // ── Portfolio KPIs ──
   const totalDelayed=all.reduce((a,d)=>a+d.s.delayed.length,0);
   const totalUnassigned=all.reduce((a,d)=>a+d.s.unassigned.length,0);
   const atRisk=all.filter(d=>d.s.score<60).length;
-  const avgScore=Math.round(all.reduce((a,d)=>a+d.s.score,0)/all.length);
   const avgAC=Math.round(all.reduce((a,d)=>a+d.s.acPct,0)/all.length);
   const avgUpdate=Math.round(all.reduce((a,d)=>a+d.s.updateRate,0)/all.length);
-  const sc=avgScore>=70?'green':avgScore>=50?'amber':'red';
   const ac=avgAC>=80?'green':avgAC>=60?'amber':'red';
   const up=avgUpdate>=80?'green':avgUpdate>=60?'amber':'red';
+
   $('master-kpis').innerHTML=`
     <div class="kpi teal"><div class="kl">Active projects</div><div class="kv teal">${all.length}</div><div class="ks">across org</div></div>
     <div class="kpi red"><div class="kl">At risk</div><div class="kv red">${atRisk}</div><div class="ks">score below 60</div></div>
@@ -1797,65 +1842,102 @@ function renderMasterDashboard(){
     <div class="kpi amber"><div class="kl">Unassigned</div><div class="kv amber">${totalUnassigned}</div><div class="ks">no owner</div></div>
     <div class="kpi ${ac}"><div class="kl">Avg AC coverage</div><div class="kv ${ac}">${avgAC}%</div><div class="ks">acceptance criteria</div></div>
     <div class="kpi ${up}"><div class="kl">Avg ADO compliance</div><div class="kv ${up}">${avgUpdate}%</div><div class="ks">updated this week</div></div>`;
-  const pills=[];
-  if(atRisk>0)pills.push(atRisk+' project'+(atRisk>1?'s':'')+' at risk');
-  if(totalDelayed>0)pills.push(totalDelayed+' delayed tasks');
-  if(totalUnassigned>0)pills.push(totalUnassigned+' unassigned items');
-  if(pills.length){
-    $('master-alarm').style.display='flex';
-    $('master-alarm-title').textContent=pills.length+' portfolio issue'+(pills.length>1?'s':'')+' require attention';
-    $('master-alarm-pills').innerHTML=pills.map(p=>'<span class="ap">'+p+'</span>').join('');
-  }
-  $('master-proj-grid').innerHTML=all.map(d=>{
-    const s=d.s;const pidx=allProjects.findIndex(p=>p.id===d.proj.id);const col=color(pidx);
-    const sc=s.score>=70?'var(--green)':s.score>=50?'var(--amber)':'var(--red)';
-    const spc=s.sprintPct>=80?'var(--green)':s.sprintPct>=50?'var(--blue)':'var(--red)';
-    const alerts=[];
-    if(s.delayed.length)alerts.push({c:'red',t:s.delayed.length+' task'+(s.delayed.length>1?'s':'')+' past sprint deadline'});
-    if(s.unassigned.length)alerts.push({c:'amber',t:s.unassigned.length+' item'+(s.unassigned.length>1?'s':'')+' unassigned'});
-    if(s.acPct<75)alerts.push({c:'amber',t:'AC coverage '+s.acPct+'% \u2014 below 75% threshold'});
-    if(s.scopeCreep>0)alerts.push({c:'amber',t:s.scopeCreep+' scope creep item'+(s.scopeCreep>1?'s':'')});
-    if(s.updateRate<70)alerts.push({c:'amber',t:'ADO compliance at '+s.updateRate+'%'});
-    if(!alerts.length)alerts.push({c:'green',t:'No critical issues detected'});
-    const spLabel=s.curIter?s.curIter.name:'No sprint';
-    const tooltip=s.reasons.join(' \u00b7 ');
-    return`<div class="master-proj-card">
-      <div class="mpc-top">
-        <div class="mpc-av" style="background:${col}">${initials(d.proj.name)}</div>
-        <div style="flex:1;min-width:0"><div class="mpc-name">${esc(d.proj.name)}</div>
-        <div class="mpc-sub">${s.wi.length} items \u00b7 ${s.iters.length} sprint${s.iters.length!==1?'s':''}</div></div>
-        <div style="text-align:right;flex-shrink:0;margin-left:10px" title="${esc(tooltip)}">
-          <div style="font-size:22px;font-weight:600;color:${sc}">${s.score}</div>
-          <div style="font-size:9px;color:var(--text-3);cursor:help">score \u24d8</div></div>
-      </div>
-      <div class="mpc-body">
-        <div class="mpc-mini-kpis">
-          <div class="mpc-mk"><div class="mpc-mk-l">Done</div><div class="mpc-mk-v" style="color:${s.completionPct>=70?'var(--green)':'var(--text)'}">${s.completionPct}%</div></div>
-          <div class="mpc-mk"><div class="mpc-mk-l">AC Cover</div><div class="mpc-mk-v" style="color:${s.acPct>=75?'var(--green)':s.acPct>=50?'var(--amber)':'var(--red)'}">${s.acPct}%</div></div>
-          <div class="mpc-mk"><div class="mpc-mk-l">ADO Cmpl</div><div class="mpc-mk-v" style="color:${s.updateRate>=75?'var(--green)':s.updateRate>=50?'var(--amber)':'var(--red)'}">${s.updateRate}%</div></div>
-          <div class="mpc-mk"><div class="mpc-mk-l">Velocity</div><div class="mpc-mk-v">${s.velocity>0?s.velocity+'pts':'\u2014'}</div></div>
-        </div>
-        <div class="mpc-mini-kpis" style="margin-top:5px">
-          <div class="mpc-mk"><div class="mpc-mk-l">Delayed</div><div class="mpc-mk-v" style="color:${s.delayed.length?'var(--red)':'var(--green)'}">${s.delayed.length}</div></div>
-          <div class="mpc-mk"><div class="mpc-mk-l">Unassigned</div><div class="mpc-mk-v" style="color:${s.unassigned.length?'var(--amber)':'var(--green)'}">${s.unassigned.length}</div></div>
-          <div class="mpc-mk"><div class="mpc-mk-l">No estimate</div><div class="mpc-mk-v" style="color:${s.unestPct>30?'var(--amber)':'var(--text)'}">${s.unestPct}%</div></div>
-          <div class="mpc-mk"><div class="mpc-mk-l">Scope creep</div><div class="mpc-mk-v" style="color:${s.scopeCreep>3?'var(--amber)':'var(--text)'}">${s.scopeCreep}</div></div>
-        </div>
-        <div class="mpc-spr-row">
-          <span class="mpc-spr-label" style="font-size:9px;max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(spLabel)}</span>
-          <div class="mpc-spr-bar"><div class="mpc-spr-fill" style="width:${s.sprintPct}%;background:${spc}"></div></div>
-          <span class="mpc-spr-pct" style="color:${spc}">${s.sprintPct}%</span>
-        </div>
-        ${getDeliveryPlanBadge(d)}
-        <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard \u2192</button>
-      </div></div>`;
-  }).join('');
 
+  // ── Filter definitions ──
+  const filters=[
+    {key:'all',      label:'All Projects',       color:'all',    count:all.length,
+     test:()=>true},
+    {key:'delayed',  label:'Delayed Tasks',       color:'red',    count:all.filter(d=>d.s.delayed.length>0).length,
+     test:d=>d.s.delayed.length>0},
+    {key:'unassigned',label:'Unassigned Items',   color:'amber',  count:all.filter(d=>d.s.unassigned.length>0).length,
+     test:d=>d.s.unassigned.length>0},
+    {key:'no_plan',  label:'No Delivery Plan',    color:'red',    count:all.filter(d=>!(d.plans&&d.plans.length)).length,
+     test:d=>!(d.plans&&d.plans.length)},
+    {key:'low_ac',   label:'Low AC Coverage',     color:'amber',  count:all.filter(d=>d.s.acPct<75).length,
+     test:d=>d.s.acPct<75},
+    {key:'low_update',label:'Low ADO Compliance', color:'amber',  count:all.filter(d=>d.s.updateRate<70).length,
+     test:d=>d.s.updateRate<70},
+    {key:'at_risk',  label:'At Risk (score<60)',  color:'red',    count:all.filter(d=>d.s.score<60).length,
+     test:d=>d.s.score<60},
+    {key:'unestimated',label:'Unestimated Items', color:'purple', count:all.filter(d=>d.s.unestPct>30).length,
+     test:d=>d.s.unestPct>30},
+    {key:'scope_creep',label:'Scope Creep',       color:'blue',   count:all.filter(d=>d.s.scopeCreep>0).length,
+     test:d=>d.s.scopeCreep>0},
+    {key:'healthy',  label:'Healthy Projects',    color:'green',  count:all.filter(d=>d.s.score>=80).length,
+     test:d=>d.s.score>=80},
+  ];
+
+  // ── Render filter pills ──
+  const pillsEl=$('master-filter-pills');
+  if(pillsEl){
+    pillsEl.innerHTML=filters.map(f=>`
+      <button class="mf-pill ${f.color}${masterFilter===f.key?' active':''}"
+        onclick="setMasterFilter('${f.key}')">
+        ${f.label}
+        <span class="mf-pill-count">${f.count}</span>
+      </button>`).join('');
+  }
+
+  // ── Apply active filter ──
+  const activeFilter=filters.find(f=>f.key===masterFilter)||filters[0];
+  const filtered=all.filter(d=>activeFilter.test(d));
+
+  // ── Project cards ──
+  if(!filtered.length){
+    $('master-proj-grid').innerHTML='<div class="empty" style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-3)">No projects match this filter.</div>';
+  }else{
+    $('master-proj-grid').innerHTML=filtered.map(d=>{
+      const s=d.s;
+      const pidx=allProjects.findIndex(p=>p.id===d.proj.id);
+      const col=color(pidx);
+      const sc=s.score>=70?'var(--green)':s.score>=50?'var(--amber)':'var(--red)';
+      const spc=s.sprintPct>=80?'var(--green)':s.sprintPct>=50?'var(--blue)':'var(--red)';
+      const spLabel=s.curIter?s.curIter.name:'No sprint';
+      const tooltip=s.reasons.join(' \u00b7 ');
+      return`<div class="master-proj-card">
+        <div class="mpc-top">
+          <div class="mpc-av" style="background:${col}">${initials(d.proj.name)}</div>
+          <div style="flex:1;min-width:0">
+            <div class="mpc-name">${esc(d.proj.name)}</div>
+            <div class="mpc-sub">${s.wi.length} items \u00b7 ${s.iters.length} sprint${s.iters.length!==1?'s':''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:10px" title="${esc(tooltip)}">
+            <div style="font-size:22px;font-weight:600;color:${sc}">${s.score}</div>
+            <div style="font-size:9px;color:var(--text-3);cursor:help">score \u24d8</div>
+          </div>
+        </div>
+        <div class="mpc-body">
+          <div class="mpc-mini-kpis">
+            <div class="mpc-mk"><div class="mpc-mk-l">Done</div><div class="mpc-mk-v" style="color:${s.completionPct>=70?'var(--green)':'var(--text)'}">${s.completionPct}%</div></div>
+            <div class="mpc-mk"><div class="mpc-mk-l">AC Cover</div><div class="mpc-mk-v" style="color:${s.acPct>=75?'var(--green)':s.acPct>=50?'var(--amber)':'var(--red)'}">${s.acPct}%</div></div>
+            <div class="mpc-mk"><div class="mpc-mk-l">ADO Cmpl</div><div class="mpc-mk-v" style="color:${s.updateRate>=75?'var(--green)':s.updateRate>=50?'var(--amber)':'var(--red)'}">${s.updateRate}%</div></div>
+            <div class="mpc-mk"><div class="mpc-mk-l">Velocity</div><div class="mpc-mk-v">${s.velocity>0?s.velocity+'pts':'\u2014'}</div></div>
+          </div>
+          <div class="mpc-mini-kpis" style="margin-top:5px">
+            <div class="mpc-mk"><div class="mpc-mk-l">Delayed</div><div class="mpc-mk-v" style="color:${s.delayed.length?'var(--red)':'var(--green)'}">${s.delayed.length}</div></div>
+            <div class="mpc-mk"><div class="mpc-mk-l">Unassigned</div><div class="mpc-mk-v" style="color:${s.unassigned.length?'var(--amber)':'var(--green)'}">${s.unassigned.length}</div></div>
+            <div class="mpc-mk"><div class="mpc-mk-l">Unestimated</div><div class="mpc-mk-v" style="color:${s.unestPct>30?'var(--amber)':'var(--text)'}">${s.unestPct}%</div></div>
+            <div class="mpc-mk"><div class="mpc-mk-l">Scope creep</div><div class="mpc-mk-v" style="color:${s.scopeCreep>3?'var(--amber)':'var(--text)'}">${s.scopeCreep}</div></div>
+          </div>
+          <div class="mpc-spr-row">
+            <span class="mpc-spr-label" style="font-size:9px;max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(spLabel)}</span>
+            <div class="mpc-spr-bar"><div class="mpc-spr-fill" style="width:${s.sprintPct}%;background:${spc}"></div></div>
+            <span class="mpc-spr-pct" style="color:${spc}">${s.sprintPct}%</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:8px;font-style:italic;line-height:1.4">${esc(s.reasons[0])}</div>
+          ${getDeliveryPlanBadge(d)}
+          <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard \u2192</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Cross-project critical items ──
   const crit=[];
   all.forEach(d=>{
     d.s.delayed.filter(w=>(w.fields['System.WorkItemType']||'')==='Task').slice(0,3).forEach(w=>{
       const it=d.s.iters.find(it=>it.name===getIterShort(w.fields));
-      const dl=it?.attributes?.finishDate?daysSince(it.attributes.finishDate):0;
+      const dl=it&&it.attributes&&it.attributes.finishDate?daysSince(it.attributes.finishDate):0;
       crit.push({id:w.id,title:(w.fields['System.Title']||'').slice(0,40),proj:d.proj.name,issue:dl+'d late',sev:'red'});
     });
     d.s.unassigned.filter(w=>isActive(w.fields)).slice(0,2).forEach(w=>{
@@ -1863,7 +1945,8 @@ function renderMasterDashboard(){
     });
   });
   crit.sort((a,b)=>parseInt(b.issue)-parseInt(a.issue));
-  $('master-critical').innerHTML=crit.length?`<div class="wi-scroll" style="max-height:260px">
+  $('master-critical').innerHTML=crit.length?`
+    <div class="wi-scroll" style="max-height:260px">
     <table class="wi" style="table-layout:fixed;width:100%">
       <thead><tr><th style="width:46px">ID</th><th>Title</th><th style="width:86px">Project</th><th style="width:72px">Issue</th></tr></thead>
       <tbody>${crit.slice(0,12).map(c=>{
@@ -1872,9 +1955,11 @@ function renderMasterDashboard(){
           <td class="wi-id-c">#${c.id}</td>
           <td style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${esc(c.title)}</td>
           <td style="font-size:10px;font-weight:500;color:var(--teal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.proj)}</td>
-          <td><span class="badge ${c.sev}">${esc(c.issue)}</span></td></tr>`;
+          <td><span class="badge ${c.sev}">${esc(c.issue)}</span></td>
+        </tr>`;
       }).join('')}</tbody></table></div>`:'<div class="empty">No critical items</div>';
 
+  // ── Leaderboard ──
   const pmap={};
   all.forEach(d=>{
     d.s.active.forEach(w=>{
@@ -1901,8 +1986,10 @@ function renderMasterDashboard(){
       ${i===0&&d.count>maxL*0.8&&leaders.length>1?'<span class="badge red" style="margin-left:5px">High</span>':''}
     </div>`).join(''):'<div class="empty">No active assignments</div>';
 
+  // ── Health score comparison ──
   $('master-scores').innerHTML=all.map(d=>{
-    const s=d.s.score;const col=s>=70?'var(--green)':s>=50?'var(--amber)':'var(--red)';
+    const s=d.s.score;
+    const col=s>=70?'var(--green)':s>=50?'var(--amber)':'var(--red)';
     return`<div class="score-bar-row" title="${esc(d.s.reasons.join(' \u00b7 '))}">
       <div style="width:130px;font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.proj.name)}</div>
       <div style="flex:1;height:10px;background:var(--bg);border-radius:5px;overflow:hidden">
@@ -1912,6 +1999,11 @@ function renderMasterDashboard(){
       <div style="font-size:10px;color:var(--text-3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.s.reasons[0])}</div>
     </div>`;
   }).join('');
+}
+
+function setMasterFilter(key){
+  masterFilter=key;
+  renderMasterDashboard();
 }
 
 function drillIntoProject(name){
@@ -1934,9 +2026,7 @@ function drillIntoProject(name){
     <button class="tb-btn" onclick="doLogout()">Sign out</button>
   </div>
   <div class="main">
-    <div class="alarm-bar" id="master-alarm" style="display:none;margin-bottom:16px">
-      <div class="alarm-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
-      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:#791F1F" id="master-alarm-title"></div><div class="alarm-pills" id="master-alarm-pills"></div></div>
+    <div class="alarm-pills" id="master-alarm-pills"></div></div>
     </div>
     <div class="slabel" style="margin-top:4px">Portfolio overview</div>
     <div class="kpi-grid" id="master-kpis"></div>

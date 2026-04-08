@@ -493,19 +493,6 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     </div>
     <div class="slabel">Sprint delivery forecast <span id="fc-label" style="font-size:10px;font-weight:400;color:var(--text-3);text-transform:none;letter-spacing:0"></span></div>
     <div id="forecast-area"></div>
-    <div class="slabel">Items needing immediate action</div>
-    <div class="two-col">
-      <div class="panel">
-        <div id="delayed-anchor" style="scroll-margin-top:70px"></div>
-        <div class="ptitle">Delayed tasks <span class="ptitle-sub" id="delayed-count"></span></div>
-        <div id="delayed-list"><div class="empty">Loading...</div></div>
-      </div>
-      <div class="panel">
-        <div id="stale-anchor" style="scroll-margin-top:70px"></div>
-        <div class="ptitle">Stale in-progress tasks <span class="ptitle-sub">7+ days no update</span></div>
-        <div id="stale-list"><div class="empty">Loading...</div></div>
-      </div>
-    </div>
     <div class="slabel">User story quality &amp; clarity</div>
     <div class="two-col">
       <div class="panel">
@@ -774,7 +761,7 @@ async function loadWorkItems(p){
 
 function renderAll(){
   renderAlarm();renderKPIs();renderSprintTimeline();
-  renderDelayedStale();renderQuality();renderClarity();
+renderQuality();renderClarity();
   renderWorkload();renderHealth();renderWITable(allWI);
   populateSprintFilter();loadDeliveryPlans(currentProject);renderSummary();
 }
@@ -796,8 +783,6 @@ function renderAlarm(){
   const stale=getStale().filter(w=>(w.fields['System.WorkItemType']||'')==='Task'&&isActive(w.fields));
   const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
   const sections=[
-    {count:delayed.length,label:'delayed tasks',anchor:'delayed-anchor'},
-    {count:stale.length,label:'stale in-progress tasks',anchor:'stale-anchor'},
     {count:unassigned.length,label:'unassigned items',anchor:'workload-anchor'},
   ].filter(s=>s.count>0);
   const bar=$('alarm-bar');
@@ -1005,30 +990,7 @@ function renderTaskCards(taskItems,sprintStart){
   }).join('');
 }
 
-function renderDelayedStale(){
-  const allDelayed=getDelayed().filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  $('delayed-count').textContent=allDelayed.length+' tasks';
-  $('delayed-list').innerHTML=allDelayed.length?allDelayed.slice(0,8).map(w=>{
-    const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
-    const d=iter?.attributes?.finishDate?daysSince(iter.attributes.finishDate):0;
-    const p=getAssignee(w.fields)||'Unassigned';
-    return`<div class="linked-row" onclick="openAdo(${w.id})">
-      <span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span>
-      <span class="badge ${d>5?'red':'amber'}">${d}d late</span><span class="wi-person">${esc(p)}</span>
-      <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button></div>`;
-  }).join('')+(allDelayed.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allDelayed.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! No delayed tasks detected.</div></div>';
 
-  const allStale=getStale().filter(w=>(w.fields['System.WorkItemType']||'')==='Task'&&isActive(w.fields));
-  $('stale-list').innerHTML=allStale.length?allStale.slice(0,8).map(w=>{
-    const d=daysSince(w.fields['System.ChangedDate']);const p=getAssignee(w.fields)||'Unassigned';
-    return`<div class="linked-row" onclick="openAdo(${w.id})">
-      <span class="wi-id">#${w.id}</span><span class="wi-title">${esc((w.fields['System.Title']||'').slice(0,45))}</span>
-      <span class="badge ${d>10?'red':'amber'}">${d}d silent</span><span class="wi-person">${esc(p)}</span>
-      <button class="ado-btn" onclick="openAdo(${w.id},event)">&#8599;</button></div>`;
-  }).join('')+(allStale.length>8?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(allStale.length-8)+' more</div>':'')
-  :'<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">&#10003;</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All tasks have been updated recently.</div></div>';
-}
 
 function setQualityTab(type,btn){
   qualityTabFilter=type;
@@ -1116,45 +1078,24 @@ function setClarityTab(type,btn){
 function isAcknowledged(text){
   if(!text)return false;
   const lower=text.toLowerCase();
-  if(/acknowledg|noted|seen|got it|understood|will do|on it|roger|thank|okay|sure\b|done|fixed|resolved/.test(lower))return true;
+  // Explicit acknowledgment words
+  if(/\backnowledg|\bnoted\b|\bseen\b|\bgot it\b|\bunderstood\b|\bwill do\b|\bon it\b|\broger\b|\bthanks\b|\bthank you\b|\bok\b|\bokay\b|\bsure\b|\bdone\b|\bfixed\b|\bresolved\b|\blooking into\b|\bwill check\b|\bwill fix\b|\bwill update\b|\bchecking\b|\bupdated\b/.test(lower))return true;
+  // Any emoji — surrogate pairs (most emojis) or common symbol range
   if(/[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(text))return true;
-  if(/[\u2600-\u27BF\u2B50\u2705\u2714]/.test(text))return true;
+  if(/[\u2600-\u27BF\u2B50\u2705\u2714\u2764\u{1F300}-\u{1FFFF}]/u.test(text))return true;
   return false;
 }
 
-async function fetchLatestComment(workItemId){
+async function fetchAllComments(workItemId){
   try{
-    const r=await fetch(ORG+'/'+encodeURIComponent(currentProject)+'/_apis/wit/workItems/'+workItemId+'/comments?api-version=7.1-preview.3&$top=1&order=desc',{
-      headers:{Authorization:AUTH,'Content-Type':'application/json'}
-    });
-    if(!r.ok)return null;
+    const r=await fetch(
+      ORG+'/'+encodeURIComponent(currentProject)+'/_apis/wit/workItems/'+workItemId+'/comments?api-version=7.1-preview.3&$top=50&order=desc',
+      {headers:{Authorization:AUTH,'Content-Type':'application/json'}}
+    );
+    if(!r.ok)return[];
     const d=await r.json();
-    const comments=d.comments||[];
-    if(!comments.length)return null;
-    return(comments[0].text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-  }catch(e){return null;}
-}
-
-async function isAcknowledged(text){
-  if(!text)return false;
-  const lower=text.toLowerCase();
-  if(/acknowledg|noted|seen|got it|understood|will do|on it|roger|thank|okay|sure\b|done|fixed|resolved/.test(lower))return true;
-  if(/[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(text))return true;
-  if(/[\u2600-\u27BF\u2B50\u2705\u2714\u2764]/.test(text))return true;
-  return false;
-}
-
-async function fetchLatestComment(workItemId){
-  try{
-    const r=await fetch(ORG+'/'+encodeURIComponent(currentProject)+'/_apis/wit/workItems/'+workItemId+'/comments?api-version=7.1-preview.3&$top=1&order=desc',{
-      headers:{Authorization:AUTH,'Content-Type':'application/json'}
-    });
-    if(!r.ok)return null;
-    const d=await r.json();
-    const comments=d.comments||[];
-    if(!comments.length)return null;
-    return(comments[0].text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-  }catch(e){return null;}
+    return(d.comments||[]).map(cm=>(cm.text||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
+  }catch(e){return[];}
 }
 
 async function renderClarity(){
@@ -1167,43 +1108,61 @@ async function renderClarity(){
     return['User Story','Task'].includes(t);
   });
 
-  const OK='<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! No unanswered comment threads detected.</div></div>';
+  const EMPTY_OK='<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! No unanswered comment threads detected.</div></div>';
+  const EMPTY_ACK='<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All comment threads have been acknowledged.</div></div>';
 
-  if(!items.length){
-    $('clarity-list').innerHTML=OK;
-    return;
-  }
+  if(!items.length){$('clarity-list').innerHTML=EMPTY_OK;return;}
 
   $('clarity-list').innerHTML='<div class="empty" style="padding:1rem">Checking comment threads\u2026</div>';
 
   const checked=[];
-  for(const w of items.slice(0,12)){
-    const latestText=await fetchLatestComment(w.id);
-    if(!isAcknowledged(latestText))checked.push({w,latestText});
+  for(const w of items.slice(0,15)){
+    const comments=await fetchAllComments(w.id);
+    if(!comments.length)continue;
+    // Latest comment is first (order=desc)
+    const latestText=comments[0];
+    // Only show if latest comment is NOT an acknowledgment
+    // i.e. the PM has not yet responded — latest comment is still from developer
+    if(!isAcknowledged(latestText)){
+      checked.push({w, latestText, commentCount:comments.length});
+    }
   }
 
-  if(!checked.length){
-    $('clarity-list').innerHTML='<div class="empty" style="padding:1.25rem;text-align:center"><div style="font-size:22px;margin-bottom:6px">\u2713</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No issues found</div><div style="font-size:11px;color:var(--text-3)">Good job! All comment threads have been acknowledged.</div></div>';
-    return;
-  }
+  if(!checked.length){$('clarity-list').innerHTML=EMPTY_ACK;return;}
 
-  $('clarity-list').innerHTML=checked.map(({w,latestText})=>{
-    const f=w.fields;const count=f['System.CommentCount']||0;
-    const p=getAssignee(f)||'Unassigned';const creator=getCreator(f);
-    const t=f['System.WorkItemType']||'';const daysOld=daysSince(f['System.ChangedDate']);const isBlocking=daysOld>=2;
-    const preview=latestText?latestText.slice(0,120)+(latestText.length>120?'...':''):'';
+  $('clarity-list').innerHTML=checked.map(({w,latestText,commentCount})=>{
+    const f=w.fields;
+    const count=commentCount||f['System.CommentCount']||0;
+    const p=getAssignee(f)||'Unassigned';
+    const creator=getCreator(f);
+    const t=f['System.WorkItemType']||'';
+    const daysOld=daysSince(f['System.ChangedDate']);
+    const isBlocking=daysOld>=2;
+    const preview=latestText?latestText.slice(0,150)+(latestText.length>150?'...':''):'';
     return`<div class="qc-card"><div class="qc-card-top">
-      <div class="qc-id-row"><span class="wi-id">#${w.id}</span><span class="tp ${tcls(t)}">${esc(t)}</span>
-      <span class="badge ${count>=2?'red':'amber'}">${count} comment${count>1?'s':''}</span>
-      <button class="ado-btn" style="opacity:1;margin-left:auto" onclick="openAdo(${w.id},event)">Open in ADO &#8599;</button></div>
+      <div class="qc-id-row">
+        <span class="wi-id">#${w.id}</span>
+        <span class="tp ${tcls(t)}">${esc(t)}</span>
+        <span class="badge ${count>=2?'red':'amber'}">${count} comment${count>1?'s':''}</span>
+        <button class="ado-btn" style="opacity:1;margin-left:auto" onclick="openAdo(${w.id},event)">Open in ADO &#8599;</button>
+      </div>
       <div class="qc-title">${esc(f['System.Title']||'Untitled')}</div>
-      <div class="qc-meta"><span>Assigned to: <strong>${esc(p)}</strong></span><span>Created by: <strong>${esc(creator)}</strong></span>
-      ${isBlocking?'<span style="color:var(--red);font-weight:500">Blocking for '+daysOld+'d</span>':''}</div></div>
-      <div class="qc-card-bottom">
-      ${preview?`<div class="qc-ai-section"><div class="qc-ai-label"><div class="qc-ai-dot" style="background:var(--amber)"></div>Latest comment</div><div class="qc-ai-feedback">\u201c${esc(preview)}\u201d</div></div>`:''}
-      ${isBlocking?`<div style="background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--red);border-left:2px solid var(--red);margin-top:8px">No response for ${daysOld} days \u2014 this may be blocking the developer.</div>`:''}
+      <div class="qc-meta">
+        <span>Assigned to: <strong>${esc(p)}</strong></span>
+        <span>Created by: <strong>${esc(creator)}</strong></span>
+        ${isBlocking?'<span style="color:var(--red);font-weight:500">No response for '+daysOld+'d</span>':''}
+      </div>
+    </div>
+    <div class="qc-card-bottom">
+      ${preview?`<div class="qc-ai-section">
+        <div class="qc-ai-label"><div class="qc-ai-dot" style="background:var(--amber)"></div>Latest unanswered comment</div>
+        <div class="qc-ai-feedback">\u201c${esc(preview)}\u201d</div>
+      </div>`:''}
+      ${isBlocking?`<div style="background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--red);border-left:2px solid var(--red);margin-top:8px">
+        Awaiting PM response for ${daysOld} days \u2014 this may be blocking the developer.
+      </div>`:''}
     </div></div>`;
-  }).join('')+(items.length>12?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(items.length-12)+' more</div>':'');
+  }).join('')+(items.length>15?'<div style="font-size:10px;color:var(--text-3);margin-top:8px;text-align:right">+'+(items.length-15)+' more</div>':'');
 }
 
 function renderWorkload(){
@@ -1225,27 +1184,80 @@ function renderWorkload(){
 }
 
 function renderHealth(){
-  const active=allWI.filter(w=>!isDone(w.fields));const tot=active.length||1;
+  const active=allWI.filter(w=>!isDone(w.fields));
+  const tot=active.length||1;
+
   const withA=active.filter(w=>getAssignee(w.fields)).length;
-  const withP=active.filter(w=>w.fields['Microsoft.VSTS.Scheduling.StoryPoints']>0).length;
   const withR=active.filter(w=>w.fields['System.CreatedBy']).length;
   const inSpr=active.filter(w=>getIterShort(w.fields)!=='').length;
   const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7).length;
-  const stories=allWI.filter(w=>isStory(w.fields));
-  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
-  const acPct=stories.length>0?Math.round(withAC/stories.length*100):100;
+
+  // Story points: only User Stories
+  const activeStories=active.filter(w=>isStory(w.fields));
+  const storiesWithPts=activeStories.filter(w=>w.fields['Microsoft.VSTS.Scheduling.StoryPoints']>0).length;
+  const storyPtsPct=activeStories.length>0?Math.round(storiesWithPts/activeStories.length*100):100;
+
+  // Estimated hours: only Tasks
+  const activeTasks=active.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const tasksWithEst=activeTasks.filter(w=>
+    w.fields['Microsoft.VSTS.Scheduling.OriginalEstimate']>0||
+    w.fields['Microsoft.VSTS.Scheduling.RemainingWork']>0
+  ).length;
+  const taskEstPct=activeTasks.length>0?Math.round(tasksWithEst/activeTasks.length*100):100;
+
+  // Acceptance criteria: only User Stories
+  const allStories=allWI.filter(w=>isStory(w.fields));
+  const withAC=allStories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
+  const acPct=allStories.length>0?Math.round(withAC/allStories.length*100):100;
+
   const checks=[
-    {l:'Has assignee',p:Math.round(withA/tot*100),fix:'Filter by Unassigned in ADO Backlog and assign each item.'},
-    {l:'Has story points',p:Math.round(withP/tot*100),fix:'Run an estimation session. No item enters a sprint without story points.'},
-    {l:'Has reporter',p:Math.round(withR/tot*100),fix:'Ensure items are created while logged in with the correct user.'},
-    {l:'In a sprint',p:Math.round(inSpr/tot*100),fix:'Drag unassigned backlog items into upcoming sprints during planning.'},
-    {l:'Updated this week',p:Math.round(updW/tot*100),fix:'Enforce daily ADO updates in standup. Target: 90%+.'},
-    {l:'Acceptance criteria',p:acPct,fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.'},
+    {
+      l:'Assignee set',
+      p:Math.round(withA/tot*100),
+      fix:'Filter by Unassigned in ADO Backlog and assign each item. Target: 100%.'
+    },
+    {
+      l:'Has reporter',
+      p:Math.round(withR/tot*100),
+      fix:'Ensure items are created while logged in to ADO with the correct user.'
+    },
+    {
+      l:'In a sprint',
+      p:Math.round(inSpr/tot*100),
+      fix:'Drag unassigned backlog items into upcoming sprints during planning.'
+    },
+    {
+      l:'Updated this week',
+      p:Math.round(updW/tot*100),
+      fix:'Enforce daily ADO updates in standup. Every active item needs a state change or comment. Target: 90%+.'
+    },
+    {
+      l:'User Stories have story points'+(activeStories.length>0?' ('+activeStories.length+')':''),
+      p:storyPtsPct,
+      fix:'Open ADO Backlog, filter by User Story, sort by Story Points. Estimate any missing ones before the next sprint planning session.'
+    },
+    {
+      l:'Tasks have estimated hours'+(activeTasks.length>0?' ('+activeTasks.length+')':''),
+      p:taskEstPct,
+      fix:'Open each Task in ADO and set Original Estimate in hours. This is required for sprint capacity planning.'
+    },
+    {
+      l:'User Stories have acceptance criteria'+(allStories.length>0?' ('+allStories.length+')':''),
+      p:acPct,
+      fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint. Make this a PM gate.'
+    },
   ];
+
   $('health-list').innerHTML=checks.map(c=>{
     const col=c.p>=80?'var(--green)':c.p>=60?'var(--amber)':'var(--red)';
-    return`<div class="health-row"><div class="health-top"><span class="hl">${c.l}</span><div class="ht"><div class="hf" style="width:${c.p}%;background:${col}"></div></div><span class="hp" style="color:${col}">${c.p}%</span></div>
-    ${c.p<80?`<div class="health-tip"><div class="health-tip-label">How to improve</div>${esc(c.fix)}</div>`:''}</div>`;
+    return`<div class="health-row">
+      <div class="health-top">
+        <span class="hl">${c.l}</span>
+        <div class="ht"><div class="hf" style="width:${c.p}%;background:${col}"></div></div>
+        <span class="hp" style="color:${col}">${c.p}%</span>
+      </div>
+      ${c.p<80?`<div class="health-tip"><div class="health-tip-label">How to improve</div>${esc(c.fix)}</div>`:''}
+    </div>`;
   }).join('');
 }
 
@@ -1652,8 +1664,6 @@ function renderMasterDashboard(){
           <div class="mpc-spr-bar"><div class="mpc-spr-fill" style="width:${s.sprintPct}%;background:${spc}"></div></div>
           <span class="mpc-spr-pct" style="color:${spc}">${s.sprintPct}%</span>
         </div>
-        <div class="mpc-alerts">${alerts.slice(0,2).map(a=>`<div class="mpc-alert"><div class="mpc-alert-dot" style="background:${a.c==='red'?'var(--red)':a.c==='green'?'var(--green)':'var(--amber)'}"></div>${esc(a.t)}</div>`).join('')}</div>
-        <div style="font-size:10px;color:var(--text-3);margin-bottom:8px;font-style:italic;line-height:1.4">${esc(s.reasons[0])}</div>
         ${getDeliveryPlanBadge(d)}
         <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard \u2192</button>
       </div></div>`;

@@ -1006,7 +1006,7 @@ function renderSprintDetail(){
   const daysLeft=e&&now<e?Math.max(0,Math.round((e-now)/86400000)):0;
   const daysTotal=s&&e?Math.max(1,Math.round((e-s)/86400000)):10;
   const blockedItems=tasks.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=3).length;
-  const typeBreak=buildTypeBreakdown(allItems);
+  const typeBreak=buildTypeBreakdown(tasks); // Tasks only
 
   area.innerHTML=`<div class="spr-box">
     <div class="spr-hdr"><span class="spr-name">${esc(it.name)}</span>
@@ -1026,13 +1026,29 @@ function renderSprintDetail(){
 
 function buildTypeBreakdown(items){
   if(!items||!items.length)return'';
+  // Only show Tasks in the type breakdown
+  const tasks=items.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  if(!tasks.length)return'';
   const counts={};
-  items.forEach(w=>{const t=w.fields['System.WorkItemType']||'Other';if(!counts[t])counts[t]={total:0,done:0};counts[t].total++;if(isDone(w.fields))counts[t].done++;});
+  tasks.forEach(w=>{
+    const t=w.fields['System.WorkItemType']||'Task';
+    if(!counts[t])counts[t]={total:0,done:0};
+    counts[t].total++;
+    if(isDone(w.fields))counts[t].done++;
+  });
   const cells=Object.entries(counts).sort((a,b)=>b[1].total-a[1].total).map(([t,v])=>{
-    const col=TYPE_COLORS[t]||'#888';const pct=Math.round(v.done/v.total*100);
-    return`<div class="type-cell"><div class="type-cell-val">${v.total}</div><div class="type-cell-done">${v.done} done \u00b7 ${pct}%</div><div class="type-cell-label"><div class="type-dot" style="background:${col}"></div><span class="tp ${tcls(t)}">${t}</span></div></div>`;
+    const col=TYPE_COLORS[t]||'#888';
+    const pct=Math.round(v.done/v.total*100);
+    return`<div class="spr-type-cell">
+      <div style="font-size:18px;font-weight:700;color:var(--text)">${v.total}</div>
+      <div style="font-size:10px;color:var(--text-3)">${v.done} done \u00b7 ${pct}%</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div>
+        <span style="font-size:10px;color:var(--text-2)">${esc(t)}</span>
+      </div>
+    </div>`;
   }).join('');
-  return`<div style="margin-top:10px"><div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Items by type</div><div class="type-grid">${cells}</div></div>`;
+  return`<div class="spr-type-row"><div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Tasks by status</div><div style="display:flex;gap:12px;flex-wrap:wrap">${cells}</div></div>`;
 }
 
 function renderForecast(){

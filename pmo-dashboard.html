@@ -1035,11 +1035,12 @@ function renderForecast(){
   const s=it.attributes?.startDate?new Date(it.attributes.startDate):null;
   const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
   const allSprintItems=getSprintItems(it.name);
+  // Count Tasks only — User Stories are parent containers, devs work on Tasks
   const taskItems=allSprintItems.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
-  const doneItems=allSprintItems.filter(w=>isDone(w.fields));
-  const donePts=doneItems.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
-  const totalPts=allSprintItems.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
-  const pct=allSprintItems.length>0?Math.round(doneItems.length/allSprintItems.length*100):0;
+  const doneItems=taskItems.filter(w=>isDone(w.fields));
+  const donePts=doneItems.reduce((a,w)=>a+getEstimate(w.fields),0);
+  const totalPts=taskItems.reduce((a,w)=>a+getEstimate(w.fields),0);
+  const pct=taskItems.length>0?Math.round(doneItems.length/taskItems.length*100):0;
   const daysLeft=e&&now<e?Math.max(1,Math.round((e-now)/86400000)):0;
   const daysTotal=s&&e?Math.max(1,Math.round((e-s)/86400000)):10;
   const daysElapsed=s&&now>s?Math.min(daysTotal,Math.round((now-s)/86400000)):0;
@@ -1055,16 +1056,16 @@ function renderForecast(){
   const currentRate=daysElapsed>0?Math.round(donePts/daysElapsed*10)/10:0;
   const isPast=e&&now>e;
   if(isPast){
-    const fp=Math.round(doneItems.length/Math.max(1,allSprintItems.length)*100);
+    const fp=Math.round(doneItems.length/Math.max(1,taskItems.length)*100);
     const fc=fp>=80?'green':'red';
     $('forecast-area').innerHTML=`<div class="fc-banner ${fc}">
       <div class="fc-top"><div class="fc-icon ${fc}"><svg viewBox="0 0 24 24"><path d="${fp>=80?'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z':'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'}"/></svg></div>
       <div><div class="fc-title ${fc}">Sprint completed \u2014 ${fp>=80?'Goal met ('+fp+'%)':'Goal missed ('+fp+'%)'}</div>
-      <div class="fc-sub ${fc}">${doneItems.length} of ${allSprintItems.length} items \u00b7 ${donePts} of ${totalPts} pts delivered</div></div></div>
+      <div class="fc-sub ${fc}">${doneItems.length} of ${taskItems.length} tasks \u00b7 ${donePts}h of ${totalPts}h delivered</div></div></div>
       <div class="fc-stats">
-        <div class="fc-stat"><div class="fc-stat-l">Committed</div><div class="fc-stat-v">${allSprintItems.length}</div><div class="fc-stat-s">${totalPts} pts</div></div>
+        <div class="fc-stat"><div class="fc-stat-l">Committed</div><div class="fc-stat-v">${taskItems.length}</div><div class="fc-stat-s">${totalPts}h est</div></div>
         <div class="fc-stat"><div class="fc-stat-l">Delivered</div><div class="fc-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="fc-stat-s">${donePts} pts</div></div>
-        <div class="fc-stat"><div class="fc-stat-l">Carried over</div><div class="fc-stat-v" style="color:var(--red)">${allSprintItems.length-doneItems.length}</div><div class="fc-stat-s">${remPts} pts</div></div>
+        <div class="fc-stat"><div class="fc-stat-l">Carried over</div><div class="fc-stat-v" style="color:var(--red)">${taskItems.length-doneItems.length}</div><div class="fc-stat-s">${remPts}h remain</div></div>
         <div class="fc-stat"><div class="fc-stat-l">Completion</div><div class="fc-stat-v" style="color:${fp>=80?'var(--green)':'var(--red)'}">${fp}%</div></div>
         <div class="fc-stat"><div class="fc-stat-l">Tasks total</div><div class="fc-stat-v">${taskItems.length}</div><div class="fc-stat-s">in this sprint</div></div>
       </div>
@@ -1074,7 +1075,7 @@ function renderForecast(){
   }
   let forecastPct=50;
   if(avgV>0&&totalPts>0){const proj=avgV+(currentRate>0?(currentRate-avgV)*0.5:0);forecastPct=Math.min(99,Math.max(10,Math.round(proj/totalPts*100)));}
-  else if(allSprintItems.length===0)forecastPct=100;
+  else if(taskItems.length===0)forecastPct=100;
   else forecastPct=pct;
   if(daysLeft===0&&pct<100)forecastPct=Math.min(forecastPct,pct+5);
   const fc=forecastPct>=80?'green':forecastPct>=60?'amber':'red';
@@ -1085,7 +1086,7 @@ function renderForecast(){
     <div><div class="fc-title ${fc}">${fc==='green'?'On track':'At risk'} \u2014 ${forecastPct}% likelihood of meeting sprint goal</div>
     <div class="fc-sub ${fc}">Based on velocity, activity, remaining estimates \u00b7 ${taskItems.length} tasks in sprint</div></div></div>
     <div class="fc-stats">
-      <div class="fc-stat"><div class="fc-stat-l">Tasks in sprint</div><div class="fc-stat-v">${taskItems.length}</div><div class="fc-stat-s">all items: ${allSprintItems.length}</div></div>
+      <div class="fc-stat"><div class="fc-stat-l">Tasks in sprint</div><div class="fc-stat-v">${taskItems.length}</div><div class="fc-stat-s">of ${allSprintItems.length} total</div></div>
       <div class="fc-stat"><div class="fc-stat-l">Done</div><div class="fc-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="fc-stat-s">${pct}% \u00b7 ${donePts} pts</div></div>
       <div class="fc-stat"><div class="fc-stat-l">Remaining</div><div class="fc-stat-v" style="color:var(--amber)">${remPts} pts</div><div class="fc-stat-s">${allSprintItems.length-doneItems.length} items</div></div>
       <div class="fc-stat"><div class="fc-stat-l">Days left</div><div class="fc-stat-v" style="color:${daysLeft<=2?'var(--red)':'var(--text)'}">${daysLeft}</div><div class="fc-stat-s">of ${daysTotal} total</div></div>
@@ -1936,7 +1937,7 @@ function masterStats(d){
     const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
     return s&&e&&now>=s&&now<=e;
   })||iters[iters.length-1]||null;
-  const sprintItems=curIter?wi.filter(w=>getIterShort(w.fields)===curIter.name):[];
+  const sprintItems=curIter?wi.filter(w=>getIterShort(w.fields)===curIter.name&&(w.fields['System.WorkItemType']||'')==='Task'):[];
   const sprintDone=sprintItems.filter(w=>isDone(w.fields));
   const sprintPct=sprintItems.length>0?Math.round(sprintDone.length/sprintItems.length*100):0;
 

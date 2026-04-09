@@ -971,15 +971,16 @@ function renderSprintDetail(){
       const start=s?new Date(s):null,end=e?new Date(e):null;
       let cls='upcoming';
       if(start&&end){if(now>=start&&now<=end)cls='active';else if(now>end)cls='done';}
-      const items=getSprintItems(it.name);
-      const doneCount=items.filter(w=>isDone(w.fields)).length;
-      const pct=items.length>0?Math.round(doneCount/items.length*100):0;
+      const allItems=getSprintItems(it.name);
+      const tasks=allItems.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+      const doneCount=tasks.filter(w=>isDone(w.fields)).length;
+      const pct=tasks.length>0?Math.round(doneCount/tasks.length*100):0;
       const barCol=cls==='done'?(pct>=80?'var(--green)':'var(--red)'):cls==='active'?'var(--blue)':'var(--border-mid)';
       const bc=cls==='done'?(pct>=80?'green':'red'):cls==='active'?'blue':'gray';
       return '<div class="linked-row"><span style="font-size:11px;font-weight:500;color:var(--text);min-width:90px">'+esc(it.name)+'</span>'
         +'<div style="flex:1;margin:0 10px"><div style="height:14px;background:var(--bg);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+barCol+';border-radius:3px"></div></div></div>'
         +'<span style="font-size:10px;color:var(--text-3);min-width:110px">'+fmt(s)+' \u2013 '+fmt(e)+'</span>'
-        +'<span style="font-size:10px;color:var(--text-3);min-width:50px;text-align:right">'+items.length+' items</span>'
+        +'<span style="font-size:10px;color:var(--text-3);min-width:50px;text-align:right">'+tasks.length+' tasks</span>'
         +'<span class="badge '+bc+'" style="margin-left:6px">'+(cls==='active'?'Active':cls==='done'?'Done':'Planned')+'</span></div>';
     }).join('');
     $('fc-label').textContent='';
@@ -991,27 +992,33 @@ function renderSprintDetail(){
   const e=it.attributes?.finishDate?new Date(it.attributes.finishDate):null;
   let spStatus='Planned',bc='gray';
   if(s&&e){if(now>=s&&now<=e){spStatus='Active';bc='blue';}else if(now>e){spStatus='Completed';bc='green';}}
-  const items=getSprintItems(it.name);
-  const doneItems=items.filter(w=>isDone(w.fields));
-  const pct=items.length>0?Math.round(doneItems.length/items.length*100):0;
-  const totalPts=items.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
-  const donePts=doneItems.reduce((a,w)=>a+(w.fields['Microsoft.VSTS.Scheduling.StoryPoints']||0),0);
+
+  const allItems=getSprintItems(it.name);
+  // Tasks only for all counts — matches the forecast section below
+  const tasks=allItems.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const doneItems=tasks.filter(w=>isDone(w.fields));
+  const remainItems=tasks.filter(w=>!isDone(w.fields));
+  const pct=tasks.length>0?Math.round(doneItems.length/tasks.length*100):0;
+  // Pts = estimated hours for tasks
+  const totalHrs=tasks.reduce((a,w)=>a+getTaskHours(w.fields),0);
+  const doneHrs=doneItems.reduce((a,w)=>a+getTaskHours(w.fields),0);
+  const remHrs=totalHrs-doneHrs;
   const daysLeft=e&&now<e?Math.max(0,Math.round((e-now)/86400000)):0;
   const daysTotal=s&&e?Math.max(1,Math.round((e-s)/86400000)):10;
-  const blockedItems=items.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=3).length;
-  const tfItems=items.filter(w=>['Task','Feature'].includes(w.fields['System.WorkItemType']));
-  const typeBreak=buildTypeBreakdown(tfItems.length?tfItems:items);
+  const blockedItems=tasks.filter(w=>!isDone(w.fields)&&daysSince(w.fields['System.ChangedDate'])>=3).length;
+  const typeBreak=buildTypeBreakdown(allItems);
+
   area.innerHTML=`<div class="spr-box">
     <div class="spr-hdr"><span class="spr-name">${esc(it.name)}</span>
     <div style="display:flex;gap:6px"><span class="badge ${bc}">${spStatus}</span><span class="badge gray">${fmt(s)} \u2013 ${fmt(e)}</span>${daysLeft>0?'<span class="badge blue">'+daysLeft+'d left</span>':''}</div></div>
     <div class="spr-stats">
-      <div class="spr-stat"><div class="spr-stat-l">Committed</div><div class="spr-stat-v">${items.length}</div><div class="spr-stat-s">${totalPts} pts</div></div>
-      <div class="spr-stat"><div class="spr-stat-l">Done</div><div class="spr-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="spr-stat-s">${donePts} pts \u00b7 ${pct}%</div></div>
-      <div class="spr-stat"><div class="spr-stat-l">Remaining</div><div class="spr-stat-v" style="color:var(--amber)">${items.length-doneItems.length}</div><div class="spr-stat-s">${totalPts-donePts} pts</div></div>
+      <div class="spr-stat"><div class="spr-stat-l">Tasks</div><div class="spr-stat-v">${tasks.length}</div><div class="spr-stat-s">${totalHrs>0?totalHrs+'h est':'no est'} \u00b7 ${allItems.length} total items</div></div>
+      <div class="spr-stat"><div class="spr-stat-l">Done</div><div class="spr-stat-v" style="color:var(--green)">${doneItems.length}</div><div class="spr-stat-s">${doneHrs>0?doneHrs+'h':pct+'%'} \u00b7 ${pct}%</div></div>
+      <div class="spr-stat"><div class="spr-stat-l">Remaining</div><div class="spr-stat-v" style="color:var(--amber)">${remainItems.length}</div><div class="spr-stat-s">${remHrs>0?remHrs+'h remain':'no est'}</div></div>
       <div class="spr-stat"><div class="spr-stat-l">Stale/Blocked</div><div class="spr-stat-v" style="color:var(--red)">${blockedItems}</div><div class="spr-stat-s">3+ days silent</div></div>
     </div>
     <div class="spr-prog"><div class="spr-prog-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--blue)':'var(--red)'}"></div></div>
-    <div class="spr-prog-label">${pct}% complete \u00b7 ${items.length-doneItems.length} items remaining${daysLeft>0?' \u00b7 '+daysLeft+' days left':''}</div>
+    <div class="spr-prog-label">${pct}% complete \u00b7 ${remainItems.length} tasks remaining${daysLeft>0?' \u00b7 '+daysLeft+' days left':''}</div>
     ${typeBreak}</div>`;
   $('fc-label').textContent='\u2014 '+it.name;
   renderForecast();

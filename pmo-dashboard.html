@@ -625,51 +625,22 @@ let isFurqanMode=false, masterData={}, masterFilter='all';
 // ── Sprint status badge ──
 function getSprintStatusBadge(iterations){
   const now=new Date();
-  const active=iterations.find(it=>{
+  const hasActiveSprint=iterations.some(it=>{
     const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
     const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
     return s&&e&&now>=s&&now<=e;
   });
-  if(active){
-    const e=new Date(active.attributes.finishDate);
-    const daysLeft=Math.max(0,Math.ceil((e-now)/86400000));
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px">'
+  if(hasActiveSprint){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:6px">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:#3B6D11;flex-shrink:0;display:inline-block"></span>'
-      +'<span style="font-size:10px;font-weight:600;color:#3B6D11">SPRINT ACTIVE</span>'
-      +'<span style="font-size:10px;color:#3B6D11;margin-left:2px">· '+esc(active.name)+'</span>'
-      +'<span style="font-size:10px;color:#3B6D11;margin-left:auto;white-space:nowrap">'+daysLeft+'d left</span>'
+      +'<span style="font-size:10px;font-weight:700;color:#3B6D11;text-transform:uppercase;letter-spacing:.04em">Sprint</span>'
+      +'<span style="font-size:10px;font-weight:600;color:#3B6D11;margin-left:auto">Created</span>'
       +'</div>';
   }
-  // Check if a sprint ended recently (within last 3 days) — just completed
-  const recent=iterations.find(it=>{
-    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
-    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
-    return e&&s&&now>e&&(now-e)/86400000<=3;
-  });
-  if(recent){
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FFF8E6;border-radius:6px;margin-bottom:8px">'
-      +'<span style="width:7px;height:7px;border-radius:50%;background:#B07400;flex-shrink:0;display:inline-block"></span>'
-      +'<span style="font-size:10px;font-weight:600;color:#B07400">SPRINT JUST ENDED</span>'
-      +'<span style="font-size:10px;color:#B07400;margin-left:2px">· '+esc(recent.name)+'</span>'
-      +'</div>';
-  }
-  // Find next upcoming sprint
-  const upcoming=iterations.filter(it=>{
-    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
-    return s&&now<s;
-  }).sort((a,b)=>new Date(a.attributes.startDate)-new Date(b.attributes.startDate))[0];
-  if(upcoming){
-    const s=new Date(upcoming.attributes.startDate);
-    const daysUntil=Math.ceil((s-now)/86400000);
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#F0F4FA;border-radius:6px;margin-bottom:8px">'
-      +'<span style="width:7px;height:7px;border-radius:50%;background:#185FA5;flex-shrink:0;display:inline-block"></span>'
-      +'<span style="font-size:10px;font-weight:600;color:#185FA5">NO ACTIVE SPRINT</span>'
-      +'<span style="font-size:10px;color:#185FA5;margin-left:2px">· next in '+daysUntil+'d</span>'
-      +'</div>';
-  }
-  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
+  return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:6px">'
     +'<span style="width:7px;height:7px;border-radius:50%;background:#A32D2D;flex-shrink:0;display:inline-block"></span>'
-    +'<span style="font-size:10px;font-weight:600;color:#A32D2D">NO ACTIVE SPRINT</span>'
+    +'<span style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.04em">Sprint</span>'
+    +'<span style="font-size:10px;font-weight:600;color:#A32D2D;margin-left:auto">Not Created</span>'
     +'</div>';
 }
 
@@ -2106,29 +2077,22 @@ function masterStats(d){
 function getDeliveryPlanBadge(d){
   const plans=d.plans||[];
   const projName=d.proj.name;
-  // Use the plans LIST page - always works regardless of plan ID format
-  const plansListUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
-
-  if(!plans.length){
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
-      +'<span style="font-size:10px;font-weight:600;color:#A32D2D">\u26a0 No delivery plan</span>'
-      +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#A32D2D;color:#fff;border:none;cursor:pointer;font-family:inherit"'
-      +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansListUrl+'">Create \u2197</button>'
+  const plansUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
+  if(plans.length){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:6px">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:#3B6D11;flex-shrink:0;display:inline-block"></span>'
+      +'<span style="font-size:10px;font-weight:700;color:#3B6D11;text-transform:uppercase;letter-spacing:.04em">Delivery Plan</span>'
+      +'<span style="font-size:10px;font-weight:600;color:#3B6D11;margin-left:auto">Created</span>'
+      +'<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansUrl+'"'
+      +' style="font-size:9px;padding:1px 7px;border-radius:20px;background:#3B6D11;color:#fff;border:none;cursor:pointer;font-family:inherit;margin-left:4px">Open \u2197</button>'
       +'</div>';
   }
-
-  // Each plan gets its own button linking to the plans page for that project
-  // plan.id exists but the URL /_boards/plans/{id} may 404 depending on ADO config
-  // Linking to plans LIST is always reliable
-  const chips=plans.map(function(p){
-    return '<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansListUrl+'"'
-      +' style="font-size:10px;padding:2px 10px;border-radius:20px;background:var(--teal);color:#fff;border:none;cursor:pointer;font-family:inherit;white-space:nowrap">'
-      +esc(p.name)+' \u2197</button>';
-  }).join(' ');
-
-  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px;flex-wrap:wrap">'
-    +'<span style="font-size:10px;font-weight:600;color:#3B6D11">\u2713 '+(plans.length>1?plans.length+' delivery plans':'Delivery plan')+'</span>'
-    +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-left:auto">'+chips+'</div>'
+  return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:6px">'
+    +'<span style="width:7px;height:7px;border-radius:50%;background:#A32D2D;flex-shrink:0;display:inline-block"></span>'
+    +'<span style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.04em">Delivery Plan</span>'
+    +'<span style="font-size:10px;font-weight:600;color:#A32D2D;margin-left:auto">Not Created</span>'
+    +'<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansUrl+'"'
+    +' style="font-size:9px;padding:1px 7px;border-radius:20px;background:#A32D2D;color:#fff;border:none;cursor:pointer;font-family:inherit;margin-left:4px">Create \u2197</button>'
     +'</div>';
 }
 
@@ -2138,6 +2102,11 @@ function renderMasterDashboard(){
 
   const all=entries.map(d=>({...d,s:masterStats(d)}));
   all.sort((a,b)=>b.s.score-a.s.score);
+
+  // ── Hide/show projects ──
+  const _hiddenIds=getHiddenProjects();
+  const _visible=all.filter(d=>!_hiddenIds.includes(d.proj.id));
+  const _hidden=all.filter(d=>_hiddenIds.includes(d.proj.id));
 
   // ── Portfolio KPIs ──
   const totalDelayed=all.reduce((a,d)=>a+d.s.delayed.length,0);
@@ -2158,25 +2127,25 @@ function renderMasterDashboard(){
 
   // ── Filter definitions ──
   const filters=[
-    {key:'all',      label:'All Projects',       color:'all',    count:all.length,
+    {key:'all',      label:'All Projects',       color:'all',    count:_visible.length,
      test:()=>true},
-    {key:'delayed',  label:'Delayed Tasks',       color:'red',    count:all.filter(d=>d.s.delayed.length>0).length,
+    {key:'delayed',  label:'Delayed Tasks',       color:'red',    count:_visible.filter(d=>d.s.delayed.length>0).length,
      test:d=>d.s.delayed.length>0},
-    {key:'unassigned',label:'Unassigned Items',   color:'amber',  count:all.filter(d=>d.s.unassigned.length>0).length,
+    {key:'unassigned',label:'Unassigned Items',   color:'amber',  count:_visible.filter(d=>d.s.unassigned.length>0).length,
      test:d=>d.s.unassigned.length>0},
-    {key:'no_plan',  label:'No Delivery Plan',    color:'red',    count:all.filter(d=>!(d.plans&&d.plans.length)).length,
+    {key:'no_plan',  label:'No Delivery Plan',    color:'red',    count:_visible.filter(d=>!(d.plans&&d.plans.length)).length,
      test:d=>!(d.plans&&d.plans.length)},
-    {key:'low_ac',   label:'Low AC Coverage',     color:'amber',  count:all.filter(d=>d.s.acPct<75).length,
+    {key:'low_ac',   label:'Low AC Coverage',     color:'amber',  count:_visible.filter(d=>d.s.acPct<75).length,
      test:d=>d.s.acPct<75},
-    {key:'low_update',label:'Low ADO Compliance', color:'amber',  count:all.filter(d=>d.s.updateRate<70).length,
+    {key:'low_update',label:'Low ADO Compliance', color:'amber',  count:_visible.filter(d=>d.s.updateRate<70).length,
      test:d=>d.s.updateRate<70},
-    {key:'at_risk',  label:'At Risk (score<60)',  color:'red',    count:all.filter(d=>d.s.score<60).length,
+    {key:'at_risk',  label:'At Risk (score<60)',  color:'red',    count:_visible.filter(d=>d.s.score<60).length,
      test:d=>d.s.score<60},
-    {key:'unestimated',label:'Unestimated Items', color:'purple', count:all.filter(d=>d.s.unestPct>30).length,
+    {key:'unestimated',label:'Unestimated Items', color:'purple', count:_visible.filter(d=>d.s.unestPct>30).length,
      test:d=>d.s.unestPct>30},
-    {key:'scope_creep',label:'Scope Creep',       color:'blue',   count:all.filter(d=>d.s.scopeCreep>0).length,
+    {key:'scope_creep',label:'Scope Creep',       color:'blue',   count:_visible.filter(d=>d.s.scopeCreep>0).length,
      test:d=>d.s.scopeCreep>0},
-    {key:'healthy',  label:'Healthy Projects',    color:'green',  count:all.filter(d=>d.s.score>=80).length,
+    {key:'healthy',  label:'Healthy Projects',    color:'green',  count:_visible.filter(d=>d.s.score>=80).length,
      test:d=>d.s.score>=80},
   ];
 
@@ -2193,13 +2162,27 @@ function renderMasterDashboard(){
 
   // ── Apply active filter ──
   const activeFilter=filters.find(f=>f.key===masterFilter)||filters[0];
-  const filtered=all.filter(d=>activeFilter.test(d));
+  const filtered=_visible.filter(d=>activeFilter.test(d));
 
   // ── Project cards ──
+  let _hiddenBar='';
+  if(_hidden.length>0){
+    _hiddenBar='<div class="hidden-bar" style="grid-column:1/-1">'
+      +'<span style="font-size:11px;color:var(--text-3)">\u26d4 '+_hidden.length+' hidden project'+(_hidden.length>1?'s':'')+':</span>'
+      +_hidden.map(function(d){
+        return '<span style="font-size:11px;font-weight:500;color:var(--text-2);background:var(--bg);padding:2px 10px;border-radius:20px;border:1px solid var(--border-mid)">'
+          +esc(d.proj.name)
+          +' <button onclick="unhideProject(\''+d.proj.id+'\')" style="font-family:var(--font);font-size:10px;background:none;border:none;color:var(--teal);cursor:pointer;padding:0 0 0 4px">Show</button>'
+          +'</span>';
+      }).join('')
+      +(_hidden.length>1?'<button onclick="unhideAllProjects()" style="font-family:var(--font);font-size:10px;margin-left:auto;padding:2px 10px;border-radius:20px;border:1px solid var(--border-mid);background:transparent;color:var(--text-2);cursor:pointer">Show all</button>':'')
+      +'</div>';
+  }
+
   if(!filtered.length){
-    $('master-proj-grid').innerHTML='<div class="empty" style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-3)">No projects match this filter.</div>';
+    $('master-proj-grid').innerHTML=_hiddenBar+'<div class="empty" style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-3)">No projects match this filter.</div>';
   }else{
-    $('master-proj-grid').innerHTML=filtered.map(d=>{
+    $('master-proj-grid').innerHTML=_hiddenBar+filtered.map(d=>{
       const s=d.s;
       const pidx=allProjects.findIndex(p=>p.id===d.proj.id);
       const col=color(pidx);
@@ -2241,6 +2224,7 @@ function renderMasterDashboard(){
           ${getSprintStatusBadge(d.s.iters)}
           ${getDeliveryPlanBadge(d)}
           <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard \u2192</button>
+          <button class="mpc-hide-btn" onclick="event.stopPropagation();hideProject('${d.proj.id}')" title="Hide from dashboard">\u00d7</button>
         </div>
       </div>`;
     }).join('');

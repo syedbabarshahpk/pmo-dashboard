@@ -1956,14 +1956,14 @@ function renderDeliveryPlanNotCreated(project){
 function renderDeliveryPlans(project,plans){
   const dpSection=$('delivery-plan-section');
   const mainPlan=plans[0];
-  const mainUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+mainPlan.id;
+  const mainUrl=mainPlan.url?mainPlan.url.replace('/_apis/work/plans/','/_boards/plans/'):ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+mainPlan.id;
   const allPlansUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans';
   const daysAgo=daysSince(mainPlan.modifiedDate);
   const updatedText=daysAgo===0?'today':daysAgo+'d ago';
 
   let extraChips='';
   plans.slice(1).forEach(p=>{
-    const url=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+p.id;
+    const url=p.url?p.url.replace('/_apis/work/plans/','/_boards/plans/'):ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+p.id;
     extraChips+='<div class="dp-plan-chip" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+url+'">';
     extraChips+='<span class="dp-plan-chip-name">'+esc(p.name)+'</span>';
     extraChips+='<span class="dp-plan-chip-icon">&#8599;</span>';
@@ -2139,7 +2139,6 @@ function masterStats(d){
 function getDeliveryPlanBadge(d){
   const plans=d.plans||[];
   const projName=d.proj.name;
-  // Plans list page (fallback)
   const plansListUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
 
   if(!plans.length){
@@ -2152,17 +2151,19 @@ function getDeliveryPlanBadge(d){
       +'</div>';
   }
 
-  // Use first plan — direct link using plan.id (GUID from ADO API)
   const plan=plans[0];
-  // Direct URL: ORG/project/_boards/plans/{planId}
-  const planUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+plan.id;
+  // Convert API url to browser url:
+  // _apis/work/plans/{id} → _boards/plans/{id}
+  const planBrowserUrl=plan.url
+    ?plan.url.replace('/_apis/work/plans/','/_boards/plans/')
+    :ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+plan.id;
 
   return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:6px">'
     +'<span style="width:7px;height:7px;border-radius:50%;background:#3B6D11;flex-shrink:0;display:inline-block"></span>'
     +'<span style="font-size:10px;font-weight:700;color:#3B6D11;text-transform:uppercase;letter-spacing:.04em">Delivery Plan</span>'
     +'<span style="font-size:10px;color:#3B6D11;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:4px">'+esc(plan.name)+'</span>'
     +'<span style="font-size:10px;font-weight:600;color:#3B6D11;margin-left:auto">Created</span>'
-    +'<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+planUrl+'"'
+    +'<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+planBrowserUrl+'"'
     +' style="font-size:9px;padding:1px 7px;border-radius:20px;background:#3B6D11;color:#fff;border:none;cursor:pointer;font-family:inherit;margin-left:4px">Open \u2197</button>'
     +'</div>';
 }

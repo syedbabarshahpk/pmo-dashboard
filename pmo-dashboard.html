@@ -581,6 +581,9 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
           <div class="sum-title">Project assessment — <span id="sum-proj"></span></div>
           <div class="sum-desc" id="sum-desc"></div>
         </div>
+        <button onclick="renderSummary()" style="font-family:var(--font);font-size:11px;font-weight:500;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border-mid);background:var(--surface);color:var(--text-2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0" title="Re-run summary with latest data">
+          <span style="font-size:14px;line-height:1">&#8635;</span> Refresh
+        </button>
         <div class="sum-score-area">
           <div class="sum-score"><span id="sum-score">-</span><button class="score-i" onclick="showScoreModal()">i</button></div>
           <div class="sum-score-label" id="sum-score-label">Health score</div>
@@ -1729,59 +1732,118 @@ function clearFilters(){
 }
 
 function renderSummary(){
-  const delayed=getDelayed().length;
-  const unassigned=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields)).length;
-  const done=allWI.filter(w=>isDone(w.fields)).length;const total=allWI.length||1;
+  const delayedItems=getDelayed();
+  const delayed=delayedItems.length;
+  const unassignedItems=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
+  const unassigned=unassignedItems.length;
+  const done=allWI.filter(w=>isDone(w.fields)).length;
+  const total=allWI.length||1;
   const pct=Math.round(done/total*100);
-  const stories=allWI.filter(w=>isStory(w.fields));
-  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').length>10).length;
-  const acPct=stories.length>0?Math.round(withAC/stories.length*100):100;
+  const POLICY=new Date('2026-03-10');
+  const stories=allWI.filter(w=>isStory(w.fields)&&new Date(w.fields['System.CreatedDate']||0)>=POLICY);
+  const withAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length>10);
+  const storiesNoAC=stories.filter(w=>(w.fields['Microsoft.VSTS.Common.AcceptanceCriteria']||'').replace(/<[^>]+>/g,'').trim().length<=10&&!isDone(w.fields));
+  const acPct=stories.length>0?Math.round(withAC.length/stories.length*100):100;
   const active=allWI.filter(w=>isActive(w.fields));
   const updW=active.filter(w=>daysSince(w.fields['System.ChangedDate'])<=7).length;
   const updateRate=active.length>0?Math.round(updW/active.length*100):100;
+  const notUpdatedItems=active.filter(w=>daysSince(w.fields['System.ChangedDate'])>7);
   const wmap={};active.forEach(w=>{const n=getAssignee(w.fields)||'Unassigned';wmap[n]=(wmap[n]||0)+1;});
   const ws=Object.entries(wmap).sort((a,b)=>b[1]-a[1]);
   const topP=ws[0]?.[0]||'';const topC=ws[0]?.[1]||0;
   const botP=ws[ws.length-1]?.[0]||'';const botC=ws[ws.length-1]?.[1]||0;
-  const withComments=allWI.filter(w=>!isDone(w.fields)&&(w.fields['System.CommentCount']||0)>0).length;
+  const itemsWithComments=allWI.filter(w=>!isDone(w.fields)&&(w.fields['System.CommentCount']||0)>0);
+  const withComments=itemsWithComments.length;
+
+  // Store all item lists for click handlers
+  window._summaryItems={
+    delayed: delayedItems,
+    unassigned: unassignedItems,
+    comments: itemsWithComments,
+    noAC: storiesNoAC,
+    notUpdated: notUpdatedItems,
+  };
+
   let score=100;
   if(delayed>0)score-=Math.min(20,delayed*2);
   if(unassigned>0)score-=Math.min(10,unassigned);
   if(acPct<50)score-=20;else if(acPct<75)score-=10;
   if(updateRate<50)score-=15;else if(updateRate<70)score-=8;
   score=Math.max(0,Math.min(100,score));
+
   $('sum-proj').textContent=currentProject;
   $('sum-desc').textContent='Based on '+total+' work items \u00b7 '+allIterations.length+' sprints \u00b7 '+ws.length+' active contributors';
   $('sum-score').textContent=score;
   $('sum-score-label').textContent='Health score \u2014 '+(score>=70?'Good':score>=50?'Needs attention':'Critical');
+
+  // Helper to build a clickable stat tag
+  function statTag(label, color, itemKey, emptyMsg){
+    const items=window._summaryItems[itemKey]||[];
+    const clickable=items.length>0;
+    return '<span class="sum-tag '+(color||'')+(clickable?' sum-tag-click':'')+'"'
+      +(clickable?' onclick="showItemList(\''+esc(label)+'\',window._summaryItems[\''+itemKey+'\'],\''+emptyMsg+'\')" title="Click to see items" style="cursor:pointer"':'')
+      +'>'+label+'</span>';
+  }
+
   const lines=[
     {icon:'red',path:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',cat:'Sprint delivery',catCls:'red',
-     text:delayed>0?delayed+' items are past their sprint end date.':'Sprint delivery is on track.',tags:delayed>0?[{l:delayed+' delayed',c:'urgent'}]:[{l:'On track',c:'good'}]},
+     text:delayed>0?delayed+' items are past their sprint end date.':'Sprint delivery is on track.',
+     tags:delayed>0
+       ?[statTag(delayed+' delayed','urgent','delayed','No delayed items.')]
+       :[statTag('On track','good','','')]},
     {icon:'blue',path:'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',cat:'Clarity',catCls:'blue',
-     text:withComments>0?withComments+' active items have open comment threads.':'No outstanding comment threads.',tags:withComments>0?[{l:withComments+' with comments',c:'warn'}]:[{l:'Clear',c:'good'}]},
+     text:withComments>0?withComments+' active items have open comment threads.':'No outstanding comment threads.',
+     tags:withComments>0
+       ?[statTag(withComments+' with comments','warn','comments','All comments addressed.')]
+       :[statTag('Clear','good','','')]},
     {icon:'amber',path:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',cat:'Story quality',catCls:acPct<50?'red':'amber',
-     text:acPct<75?'Only '+acPct+'% of user stories have acceptance criteria.':'Story quality is acceptable.',tags:[{l:acPct+'% quality',c:acPct<50?'urgent':'warn'}]},
+     text:acPct<75?'Only '+acPct+'% of user stories have acceptance criteria (post Mar 10).':'Story quality is acceptable.',
+     tags:acPct<75
+       ?[statTag(storiesNoAC.length+' missing AC','urgent','noAC','All stories have acceptance criteria.'),statTag(acPct+'% quality','warn','','')]
+       :[statTag(acPct+'% quality','good','','')]},
     {icon:topC>botC*3?'amber':'green',path:'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z',cat:'Resource balance',catCls:topC>botC*3?'amber':'green',
-     text:topP&&topC>botC*2?topP+' has '+topC+' active items while '+botP+' has only '+botC+'.':'Team workload is balanced.',tags:topP?[{l:topP+': '+topC,c:topC>botC*3?'urgent':'warn'},{l:botP+': '+botC,c:'good'}]:[]},
-    {icon:'blue',path:'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z',cat:'Process compliance',catCls:updateRate<60?'red':'amber',
-     text:updateRate+'% of active items updated in the last 7 days. '+unassigned+' items have no owner.',tags:[{l:updateRate+'% update rate',c:updateRate<60?'urgent':'warn'},{l:unassigned+' unassigned',c:unassigned>5?'urgent':'warn'}]},
-    {icon:'green',path:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',cat:"What's working",catCls:'green',
-     text:pct+'% of all work items are resolved. '+ws.length+' team members are actively contributing.',tags:[{l:pct+'% completion',c:'good'},{l:ws.length+' contributors',c:'good'}]},
+     text:topP&&topC>botC*3?topP+' has '+topC+' items vs '+botP+"'s "+botC+'. Consider rebalancing.':'Workload is fairly distributed.',
+     tags:[statTag(ws.length+' contributors','blue','','')]},
+    {icon:'green',path:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',cat:'ADO compliance',catCls:updateRate<70?'red':'green',
+     text:''+updateRate+'% of active items updated in the last 7 days.',
+     tags:updateRate<100
+       ?[statTag(notUpdatedItems.length+' not updated','warn','notUpdated','All items up to date.'),statTag(updateRate+'% compliance',updateRate<70?'urgent':'warn','','')]
+       :[statTag('100% up to date','good','','')]},
+    {icon:'teal',path:'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z',cat:'Project velocity',catCls:'teal',
+     text:pct+'% of total work items completed across all sprints.',
+     tags:[statTag(done+' done','good','',''),statTag((total-done)+' remaining','blue','','')]},
   ];
-  $('sum-lines').innerHTML=lines.map(l=>`<div class="sum-line">
-    <div class="sum-icon ${l.icon}"><svg viewBox="0 0 24 24"><path d="${l.path}"/></svg></div>
-    <div class="sum-body"><div class="sum-cat ${l.catCls}">${l.cat}</div><div class="sum-text">${l.text}</div></div>
-    <div class="sum-tags">${l.tags.map(t=>'<span class="sum-tag '+t.c+'">'+esc(t.l)+'</span>').join('')}</div></div>`).join('');
+
+  $('sum-lines').innerHTML=lines.map(l=>`
+    <div class="sum-line">
+      <div class="sum-line-left">
+        <div class="sum-icon ${l.icon}"><svg viewBox="0 0 24 24"><path d="${l.path}"/></svg></div>
+        <div>
+          <div class="sum-line-cat ${l.catCls}">${l.cat}</div>
+          <div class="sum-line-text">${l.text}</div>
+          <div class="sum-tags">${Array.isArray(l.tags)?l.tags.join(''):l.tags}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
   const advice=[];
-  if(withComments>0)advice.push({t:'Answer all open comment threads today \u2014 takes under 30 minutes and immediately unblocks developers.',i:'high'});
-  if(topC>botC*2&&topP&&botP)advice.push({t:'Move items from '+topP+' to '+botP+' to rebalance workload.',i:'high'});
-  if(acPct<75)advice.push({t:'Add acceptance criteria to the '+(stories.length-withAC)+' stories currently missing it.',i:'med'});
-  if(delayed>0)advice.push({t:'Triage the '+delayed+' delayed items: complete, move, or cancel.',i:'med'});
-  if(updateRate<70)advice.push({t:'Enforce daily ADO updates in standup. Target: 90%+.',i:'proc'});
-  if(unassigned>0)advice.push({t:'Assign the '+unassigned+' unowned items immediately.',i:'med'});
-  if(!advice.length)advice.push({t:'Project is in good health. Maintain backlog hygiene.',i:'good'});
-  $('advice-items').innerHTML=advice.map((a,i)=>`<div class="advice-item"><div class="advice-num">${i+1}</div>
-    <div class="advice-text">${esc(a.t)}<span class="advice-impact ${a.i}">${a.i==='high'?'High impact':a.i==='med'?'Medium':a.i==='proc'?'Process fix':'Keep up'}</span></div></div>`).join('');
+  if(acPct<75)advice.push({t:'Add acceptance criteria to the '+(stories.length-withAC.length)+' stories currently missing it.',i:'high',key:'noAC',label:'Show stories missing AC'});
+  if(delayed>0)advice.push({t:'Triage the '+delayed+' delayed items: complete, move, or cancel.',i:'med',key:'delayed',label:'Show delayed items'});
+  if(updateRate<70)advice.push({t:'Enforce daily ADO updates in standup. Target: 90%+.',i:'proc',key:'notUpdated',label:'Show stale items'});
+  if(unassigned>0)advice.push({t:'Assign the '+unassigned+' unowned items immediately.',i:'med',key:'unassigned',label:'Show unassigned items'});
+  if(!advice.length)advice.push({t:'Project is in good health. Maintain backlog hygiene.',i:'good',key:'',label:''});
+
+  $('advice-items').innerHTML=advice.map((a,i)=>{
+    const hasItems=a.key&&(window._summaryItems[a.key]||[]).length>0;
+    return`<div class="advice-item">
+      <div class="advice-num">${i+1}</div>
+      <div class="advice-text">
+        ${esc(a.t)}
+        <span class="advice-impact ${a.i}">${a.i==='high'?'High impact':a.i==='med'?'Medium':a.i==='proc'?'Process fix':'Keep up'}</span>
+        ${hasItems?'<button onclick="showItemList(\''+esc(a.label)+'\',window._summaryItems[\''+a.key+'\'],\'\')" style="margin-left:8px;font-family:var(--font);font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer">View items \u2192</button>':''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function showScoreModal(){

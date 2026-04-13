@@ -490,6 +490,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
       </div>
     </div>
     <div class="slabel" style="margin-top:12px">Project health</div>
+    <div id="top-sprint-status" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"></div>
     <div class="kpi-grid">
       <div class="kpi red"><button class="kpi-i" onclick="showModal('Delayed Items','Work items past their sprint end date that are not resolved. Each delayed item represents a broken sprint commitment and increases carryover debt. Industry benchmark: 0 delayed items. Above 5 is a critical delivery risk.')">i</button><div class="kl">Delayed items</div><div class="kv red" id="k-delayed">-</div><div class="ks">past sprint end</div></div>
       <div class="kpi amber"><button class="kpi-i" onclick="showModal('Unassigned Items','Active items with no owner. Unowned work has no accountability — nobody is responsible for completing it. Industry standard: 0 unassigned items in an active sprint.')">i</button><div class="kl">Unassigned</div><div class="kv amber" id="k-unassigned">-</div><div class="ks">no owner</div></div>
@@ -906,9 +907,33 @@ async function loadWorkItems(p){
 
 
 function renderSprintStatusBadge(){
+  // Render in the delivery plan area (bottom of page)
   const el=$('sprint-status-section');
-  if(!el)return;
-  el.innerHTML=getSprintStatusBadge(allIterations);
+  if(el)el.innerHTML=getSprintStatusBadge(allIterations);
+
+  // ALSO render as a compact pill in the top status row above KPI cards
+  const topEl=$('top-sprint-status');
+  if(!topEl)return;
+  const now=new Date();
+  const active=allIterations.find(it=>{
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
+    return s&&e&&now>=s&&now<=e;
+  });
+  if(active){
+    const daysLeft=Math.max(0,Math.ceil((new Date(active.attributes.finishDate)-now)/86400000));
+    topEl.innerHTML='<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#EAF3DE;border-radius:20px;border:1px solid #C2DFA9">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:#3B6D11;display:inline-block"></span>'
+      +'<span style="font-size:11px;font-weight:600;color:#3B6D11">Sprint Active</span>'
+      +'<span style="font-size:11px;color:#3B6D11">\u00b7 '+esc(active.name)+'</span>'
+      +'<span style="font-size:10px;color:#3B6D11;font-weight:500;background:rgba(59,109,17,.12);padding:1px 7px;border-radius:10px">'+daysLeft+'d left</span>'
+      +'</div>';
+  } else {
+    topEl.innerHTML='<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#FCEBEB;border-radius:20px;border:1px solid #F0C2C2">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:#A32D2D;display:inline-block"></span>'
+      +'<span style="font-size:11px;font-weight:600;color:#A32D2D">No Active Sprint</span>'
+      +'</div>';
+  }
 }
 function renderAll(){
   renderAlarm();renderKPIs();renderSprintTimeline();

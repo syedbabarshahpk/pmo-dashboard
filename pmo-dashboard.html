@@ -492,9 +492,9 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     <div class="slabel" style="margin-top:12px">Project health</div>
     <div id="top-sprint-status" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"></div>
     <div class="kpi-grid">
-      <div class="kpi red"><button class="kpi-i" onclick="showModal('Delayed Items','Work items past their sprint end date that are not resolved. Each delayed item represents a broken sprint commitment and increases carryover debt. Industry benchmark: 0 delayed items. Above 5 is a critical delivery risk.')">i</button><div class="kl">Delayed items</div><div class="kv red" id="k-delayed">-</div><div class="ks">past sprint end</div></div>
-      <div class="kpi amber"><button class="kpi-i" onclick="showModal('Unassigned Items','Active items with no owner. Unowned work has no accountability — nobody is responsible for completing it. Industry standard: 0 unassigned items in an active sprint.')">i</button><div class="kl">Unassigned</div><div class="kv amber" id="k-unassigned">-</div><div class="ks">no owner</div></div>
-      <div class="kpi red"><button class="kpi-i" onclick="showModal('No Reporter','Items with no Created By field. Without a reporter there is no accountability trail — nobody knows who requested the work, making it impossible to clarify requirements.')">i</button><div class="kl">No reporter</div><div class="kv red" id="k-noreporter">-</div><div class="ks">missing accountability</div></div>
+      <div class="kpi red" id="kpi-delayed" style="cursor:pointer" onclick="showItemList('Delayed Items',window._kpiItems&&window._kpiItems.delayed||[],'No delayed items.')"><button class="kpi-i" onclick="event.stopPropagation();showModal('Delayed Items','Work items past their sprint end date that are not resolved. Each delayed item represents a broken sprint commitment and increases carryover debt. Industry benchmark: 0 delayed items. Above 5 is a critical delivery risk.')">i</button><div class="kl">Delayed items</div><div class="kv red" id="k-delayed">-</div><div class="ks">past sprint end</div></div>
+      <div class="kpi amber" id="kpi-unassigned" style="cursor:pointer" onclick="showItemList('Unassigned Items',window._kpiItems&&window._kpiItems.unassigned||[],'All active items are assigned.')"><button class="kpi-i" onclick="event.stopPropagation();showModal('Unassigned Items','Active items with no owner. Unowned work has no accountability — nobody is responsible for completing it. Industry standard: 0 unassigned items in an active sprint.')">i</button><div class="kl">Unassigned</div><div class="kv amber" id="k-unassigned">-</div><div class="ks">no owner</div></div>
+      <div class="kpi red" id="kpi-noreporter" style="cursor:pointer" onclick="showItemList('No Reporter',window._kpiItems&&window._kpiItems.noreporter||[],'All items have a reporter.')"><button class="kpi-i" onclick="event.stopPropagation();showModal('No Reporter','Items with no Created By field. Without a reporter there is no accountability trail — nobody knows who requested the work, making it impossible to clarify requirements.')">i</button><div class="kl">No reporter</div><div class="kv red" id="k-noreporter">-</div><div class="ks">missing accountability</div></div>
       <div class="kpi green"><button class="kpi-i" onclick="showModal('Completion Rate','Percentage of all work items in this project that are resolved, closed, or done. A healthy project shows this increasing sprint-over-sprint at a rate matching team velocity.')">i</button><div class="kl">Completion</div><div class="kv green" id="k-completion">-</div><div class="ks" id="k-completion-s">done</div></div>
       <div class="kpi purple" id="kpi-quality"><button class="kpi-i" onclick="showModal('User Story Quality','Percentage of user stories with acceptance criteria. Without acceptance criteria developers cannot determine when a story is done, PMs cannot sign off, and QA has no test basis. Industry standard: 100% of stories entering a sprint must have acceptance criteria.')">i</button><div class="kl">US quality</div><div class="kv purple" id="k-quality">-</div><div class="ks">have acceptance criteria</div></div>
     </div>
@@ -587,7 +587,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
         <div class="sum-title-area" style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <div class="sum-title" style="margin-bottom:0">Project assessment — <span id="sum-proj"></span></div>
-            <button onclick="renderSummary()" style="font-family:var(--font);font-size:10px;font-weight:500;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0" title="Re-run with latest data">&#8635; Refresh</button>
+            <button onclick="refreshSummary(this)" style="font-family:var(--font);font-size:10px;font-weight:500;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0" title="Re-fetch from ADO and refresh">&#8635; Refresh</button>
           </div>
           <div class="sum-desc" id="sum-desc"></div>
         </div>
@@ -1029,21 +1029,7 @@ function renderKPIs(){
   qc.className='kpi '+(qPct<50?'red':qPct<75?'amber':'green');
   $('k-quality').className='kv '+(qPct<50?'red':qPct<75?'amber':'green');
 
-  // Make KPI cards clickable to show drill-down
-  const kpiClicks={
-    'k-delayed': ['Delayed Items','delayed','Items past their sprint end date'],
-    'k-unassigned': ['Unassigned Items','unassigned','Active items with no owner assigned'],
-    'k-noreporter': ['No Reporter Items','noreporter','Items with no Created By field'],
-    'k-quality': ['Missing Acceptance Criteria','quality','User Stories without acceptance criteria (post Mar 10)'],
-  };
-  Object.entries(kpiClicks).forEach(([id,[title,key,empty]])=>{
-    const el=$(id);
-    if(!el)return;
-    const card=el.closest('.kpi');
-    if(!card)return;
-    card.style.cursor='pointer';
-    card.onclick=()=>showItemList(title, window._kpiItems[key], empty);
-  });
+  // KPI cards have inline onclick in HTML
 }
 
 function renderSprintTimeline(){
@@ -1762,6 +1748,31 @@ function clearFilters(){
   ['f-type','f-state','f-sprint'].forEach(id=>{const el=$(id);if(el)el.value='';});
   const ft=$('f-text');if(ft)ft.value='';
   currentWI=allWI;renderWITable(allWI);if(currentView!=='table')renderChart(currentView);
+}
+
+async function refreshSummary(btn){
+  // Re-fetch ALL work items from ADO then re-render everything
+  if(btn){
+    btn.disabled=true;
+    btn.innerHTML='&#8635; Fetching...';
+    btn.style.opacity='0.6';
+  }
+  try{
+    const fresh=await loadWorkItems(currentProject);
+    const EXCL=['Issue','Impediment','Test Plan','Test Suite','Test Case'];
+    allWI=fresh.filter(w=>!EXCL.includes(w.fields['System.WorkItemType']||''));
+    currentWI=allWI;
+    // Also re-fetch comment counts specifically since they change often
+    renderAll();
+  }catch(e){
+    console.error('refreshSummary error:',e);
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.innerHTML='&#8635; Refresh';
+      btn.style.opacity='1';
+    }
+  }
 }
 
 function renderSummary(){

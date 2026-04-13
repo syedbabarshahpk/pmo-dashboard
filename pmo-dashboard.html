@@ -374,6 +374,11 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 .mpc-alerts{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
 .mpc-alert{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--text);line-height:1.4;}
 .mpc-alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.mpc-hide-btn{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.06);color:var(--text-3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;line-height:1;font-family:var(--font);}
+.master-proj-card:hover .mpc-hide-btn{opacity:1;}
+.mpc-hide-btn:hover{background:rgba(163,45,45,.15);color:var(--red);}
+.master-proj-card{position:relative;}
+.hidden-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1.5px dashed var(--border-mid);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;}
 .mpc-view-btn{width:100%;padding:7px;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--r-sm);font-family:var(--font);font-size:11px;color:var(--text-2);cursor:pointer;transition:all .15s;}
 .mpc-view-btn:hover{border-color:var(--teal);color:var(--teal);}
 .leader-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,.05);}
@@ -573,6 +578,7 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
       <div class="wi-count-l" id="wi-count"></div>
     </div>
     <div class="slabel">Delivery plan</div>
+    <div id="sprint-status-section" style="margin-bottom:4px"></div>
     <div id="delivery-plan-section"><div class="delivery-plan-bar"><div class="dp-icon gray"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg></div><div><div class="dp-title">Loading delivery plans...</div></div></div></div>
     <div class="slabel">Project intelligence summary</div>
     <div class="sum-box">
@@ -615,6 +621,77 @@ let ORG='', AUTH='', currentProject='', allProjects=[], allWI=[], allIterations=
 let projectAuthMap={}, selectedSprintIdx=null, wiChartInst=null, currentView='table', currentWI=[];
 let qualityTabFilter='all', clarityTabFilter='all';
 let isFurqanMode=false, masterData={}, masterFilter='all';
+
+// ── Sprint status badge ──
+function getSprintStatusBadge(iterations){
+  const now=new Date();
+  const active=iterations.find(it=>{
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
+    return s&&e&&now>=s&&now<=e;
+  });
+  if(active){
+    const e=new Date(active.attributes.finishDate);
+    const daysLeft=Math.max(0,Math.ceil((e-now)/86400000));
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:#3B6D11;flex-shrink:0;display:inline-block"></span>'
+      +'<span style="font-size:10px;font-weight:600;color:#3B6D11">SPRINT ACTIVE</span>'
+      +'<span style="font-size:10px;color:#3B6D11;margin-left:2px">· '+esc(active.name)+'</span>'
+      +'<span style="font-size:10px;color:#3B6D11;margin-left:auto;white-space:nowrap">'+daysLeft+'d left</span>'
+      +'</div>';
+  }
+  // Check if a sprint ended recently (within last 3 days) — just completed
+  const recent=iterations.find(it=>{
+    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    return e&&s&&now>e&&(now-e)/86400000<=3;
+  });
+  if(recent){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FFF8E6;border-radius:6px;margin-bottom:8px">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:#B07400;flex-shrink:0;display:inline-block"></span>'
+      +'<span style="font-size:10px;font-weight:600;color:#B07400">SPRINT JUST ENDED</span>'
+      +'<span style="font-size:10px;color:#B07400;margin-left:2px">· '+esc(recent.name)+'</span>'
+      +'</div>';
+  }
+  // Find next upcoming sprint
+  const upcoming=iterations.filter(it=>{
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    return s&&now<s;
+  }).sort((a,b)=>new Date(a.attributes.startDate)-new Date(b.attributes.startDate))[0];
+  if(upcoming){
+    const s=new Date(upcoming.attributes.startDate);
+    const daysUntil=Math.ceil((s-now)/86400000);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#F0F4FA;border-radius:6px;margin-bottom:8px">'
+      +'<span style="width:7px;height:7px;border-radius:50%;background:#185FA5;flex-shrink:0;display:inline-block"></span>'
+      +'<span style="font-size:10px;font-weight:600;color:#185FA5">NO ACTIVE SPRINT</span>'
+      +'<span style="font-size:10px;color:#185FA5;margin-left:2px">· next in '+daysUntil+'d</span>'
+      +'</div>';
+  }
+  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
+    +'<span style="width:7px;height:7px;border-radius:50%;background:#A32D2D;flex-shrink:0;display:inline-block"></span>'
+    +'<span style="font-size:10px;font-weight:600;color:#A32D2D">NO ACTIVE SPRINT</span>'
+    +'</div>';
+}
+
+// ── Hidden projects (persisted in localStorage) ──
+function getHiddenProjects(){
+  try{ return JSON.parse(localStorage.getItem('pmo_hidden_projects')||'[]'); }
+  catch(e){ return []; }
+}
+function hideProject(projId){
+  const hidden=getHiddenProjects();
+  if(!hidden.includes(projId)){ hidden.push(projId); localStorage.setItem('pmo_hidden_projects',JSON.stringify(hidden)); }
+  renderMasterDashboard();
+}
+function unhideProject(projId){
+  const hidden=getHiddenProjects().filter(id=>id!==projId);
+  localStorage.setItem('pmo_hidden_projects',JSON.stringify(hidden));
+  renderMasterDashboard();
+}
+function unhideAllProjects(){
+  localStorage.removeItem('pmo_hidden_projects');
+  renderMasterDashboard();
+}
 
 // Work item types that require estimates (Issues excluded)
 const ESTIMATABLE_TYPES=['User Story','Task','Bug','Feature','Epic','Product Backlog Item','Requirement','Change Request','Review','Risk'];
@@ -856,12 +933,18 @@ async function loadWorkItems(p){
   return all;
 }
 
+
+function renderSprintStatusBadge(){
+  const el=$('sprint-status-section');
+  if(!el)return;
+  el.innerHTML=getSprintStatusBadge(allIterations);
+}
 function renderAll(){
   renderAlarm();renderKPIs();renderSprintTimeline();
   renderDelayed();
   renderQuality();renderClarity();
   renderWorkload();renderHealth();renderWITable(allWI);
-  populateSprintFilter();loadDeliveryPlans(currentProject);renderSummary();
+  populateSprintFilter();loadDeliveryPlans(currentProject);renderSprintStatusBadge();renderSummary();
 }
 
 function getDelayed(){
@@ -2155,6 +2238,7 @@ function renderMasterDashboard(){
             <span class="mpc-spr-pct" style="color:${spc}">${s.sprintPct}%</span>
           </div>
           <div style="font-size:10px;color:var(--text-3);margin-bottom:8px;font-style:italic;line-height:1.4">${esc(s.reasons[0])}</div>
+          ${getSprintStatusBadge(d.s.iters)}
           ${getDeliveryPlanBadge(d)}
           <button class="mpc-view-btn" onclick="drillIntoProject('${esc(d.proj.name)}')">View full dashboard \u2192</button>
         </div>

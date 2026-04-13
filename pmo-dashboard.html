@@ -278,23 +278,23 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 /* SUMMARY */
 .sum-box{background:var(--teal-dark);border-radius:12px;padding:20px;}
 .sum-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px;}
-.sum-title-area .sum-title{font-size:11px;font-weight:600;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+.sum-title-area .sum-title{font-size:11px;font-weight:600;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.08em;margin-bottom:0;white-space:nowrap;}
 .sum-title-area .sum-desc{font-size:11px;color:rgba(255,255,255,.35);}
 .sum-score-area{text-align:right;flex-shrink:0;}
 .sum-score{font-size:32px;font-weight:600;color:#fff;line-height:1;display:flex;align-items:center;gap:6px;justify-content:flex-end;}
 .score-i{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.5);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);transition:all .2s;}
 .score-i:hover{border-color:#fff;color:#fff;background:rgba(255,255,255,.1);}
 .sum-score-label{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;}
-.sum-line{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:0.5px solid rgba(255,255,255,.08);}
+.sum-line{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,.08);width:100%;}
 .sum-line:last-of-type{border-bottom:none;}
 .sum-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
 .sum-icon svg{width:15px;height:15px;fill:#fff;}
 .sum-icon.red{background:rgba(226,75,74,.3);}.sum-icon.amber{background:rgba(239,159,39,.25);}.sum-icon.green{background:rgba(99,153,34,.25);}.sum-icon.blue{background:rgba(24,95,165,.25);}.sum-icon.teal{background:rgba(13,110,110,.35);}
-.sum-body{flex:1;}
+.sum-body{flex:1;min-width:0;}
 .sum-cat{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
 .sum-cat.red{color:rgba(240,149,149,1);}.sum-cat.amber{color:rgba(250,199,117,1);}.sum-cat.green{color:rgba(157,225,203,1);}.sum-cat.blue{color:rgba(181,212,244,1);}
-.sum-text{font-size:12px;color:rgba(255,255,255,.8);line-height:1.65;}
-.sum-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.sum-text{font-size:12px;color:rgba(255,255,255,.8);line-height:1.55;margin-top:2px;}
+.sum-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center;}
 .sum-tag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);white-space:nowrap;transition:opacity .15s;}.sum-tag-click:hover{opacity:.75;}
 .sum-tag.urgent{background:rgba(226,75,74,.25);color:#F7C1C1;}
 .sum-tag.warn{background:rgba(239,159,39,.2);color:#FAC775;}
@@ -577,14 +577,14 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
     <div class="slabel">Project intelligence summary</div>
     <div class="sum-box">
       <div class="sum-hdr">
-        <div class="sum-title-area">
-          <div class="sum-title">Project assessment — <span id="sum-proj"></span></div>
+        <div class="sum-title-area" style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <div class="sum-title" style="margin-bottom:0">Project assessment — <span id="sum-proj"></span></div>
+            <button onclick="renderSummary()" style="font-family:var(--font);font-size:10px;font-weight:500;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0" title="Re-run with latest data">&#8635; Refresh</button>
+          </div>
           <div class="sum-desc" id="sum-desc"></div>
         </div>
-        <button onclick="renderSummary()" style="font-family:var(--font);font-size:11px;font-weight:500;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border-mid);background:var(--surface);color:var(--text-2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0" title="Re-run summary with latest data">
-          <span style="font-size:14px;line-height:1">&#8635;</span> Refresh
-        </button>
-        <div class="sum-score-area">
+        <div class="sum-score-area" style="text-align:right;flex-shrink:0;margin-left:16px">
           <div class="sum-score"><span id="sum-score">-</span><button class="score-i" onclick="showScoreModal()">i</button></div>
           <div class="sum-score-label" id="sum-score-label">Health score</div>
         </div>
@@ -1859,14 +1859,14 @@ function renderDeliveryPlanNotCreated(project){
 function renderDeliveryPlans(project,plans){
   const dpSection=$('delivery-plan-section');
   const mainPlan=plans[0];
-  const mainUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+mainPlan.id;
+  const mainUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans';
   const allPlansUrl=ORG+'/'+encodeURIComponent(project)+'/_boards/plans';
   const daysAgo=daysSince(mainPlan.modifiedDate);
   const updatedText=daysAgo===0?'today':daysAgo+'d ago';
 
   let extraChips='';
   plans.slice(1).forEach(p=>{
-    const url=ORG+'/'+encodeURIComponent(project)+'/_boards/plans/'+p.id;
+    const url=ORG+'/'+encodeURIComponent(project)+'/_boards/plans';
     extraChips+='<div class="dp-plan-chip" onclick="window.open(this.dataset.url,\'_blank\')" data-url="'+url+'">';
     extraChips+='<span class="dp-plan-chip-name">'+esc(p.name)+'</span>';
     extraChips+='<span class="dp-plan-chip-icon">&#8599;</span>';
@@ -2023,20 +2023,22 @@ function masterStats(d){
 function getDeliveryPlanBadge(d){
   const plans=d.plans||[];
   const projName=d.proj.name;
-  const plansPageUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
+  // Use the plans LIST page - always works regardless of plan ID format
+  const plansListUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
 
   if(!plans.length){
     return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
       +'<span style="font-size:10px;font-weight:600;color:#A32D2D">\u26a0 No delivery plan</span>'
       +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#A32D2D;color:#fff;border:none;cursor:pointer;font-family:inherit"'
-      +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansPageUrl+'">Create \u2197</button>'
+      +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansListUrl+'">Create \u2197</button>'
       +'</div>';
   }
 
-  // Show all plans as chips
+  // Each plan gets its own button linking to the plans page for that project
+  // plan.id exists but the URL /_boards/plans/{id} may 404 depending on ADO config
+  // Linking to plans LIST is always reliable
   const chips=plans.map(function(p){
-    const planUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+p.id;
-    return '<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+planUrl+'"'
+    return '<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansListUrl+'"'
       +' style="font-size:10px;padding:2px 10px;border-radius:20px;background:var(--teal);color:#fff;border:none;cursor:pointer;font-family:inherit;white-space:nowrap">'
       +esc(p.name)+' \u2197</button>';
   }).join(' ');

@@ -2050,13 +2050,16 @@ function masterStats(d){
 
   const completionPct=Math.round(done.length/total*100);
 
-  // Current sprint
+  // Current sprint — null if no sprint is active RIGHT NOW
   const curIter=iters.find(it=>{
     const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
     const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
     return s&&e&&now>=s&&now<=e;
-  })||iters[iters.length-1]||null;
-  const sprintItems=curIter?wi.filter(w=>getIterShort(w.fields)===curIter.name&&(w.fields['System.WorkItemType']||'')==='Task'):[];
+  })||null;
+  // Last sprint (for velocity/display fallback — separate from curIter)
+  const lastIter=iters[iters.length-1]||null;
+  const _displayIter=curIter||lastIter;
+  const sprintItems=_displayIter?wi.filter(w=>getIterShort(w.fields)===_displayIter.name&&(w.fields['System.WorkItemType']||'')==='Task'):[];
   const sprintDone=sprintItems.filter(w=>isDone(w.fields));
   const sprintPct=sprintItems.length>0?Math.round(sprintDone.length/sprintItems.length*100):0;
 
@@ -2093,7 +2096,7 @@ function masterStats(d){
 
   return{delayed,unassigned,done:done.length,total,completionPct,
     acPct,unestPct,updateRate,velocity,scopeCreep,
-    curIter,sprintPct,sprintItems,active,wi,iters,score,reasons};
+    curIter,hasActiveSprint:!!curIter,sprintPct,sprintItems,active,wi,iters,score,reasons};
 }
 
 function getDeliveryPlanBadge(d){
@@ -2169,8 +2172,8 @@ function renderMasterDashboard(){
      test:d=>d.s.scopeCreep>0},
     {key:'healthy',  label:'Healthy Projects',    color:'green',  count:_visible.filter(d=>d.s.score>=80).length,
      test:d=>d.s.score>=80},
-    {key:'no_sprint', label:'No Active Sprint',    color:'red',    count:_visible.filter(d=>!d.s.curIter).length,
-     test:d=>!d.s.curIter},
+    {key:'no_sprint', label:'No Active Sprint',    color:'red',    count:_visible.filter(d=>!d.s.hasActiveSprint).length,
+     test:d=>!d.s.hasActiveSprint},
     {key:'no_delivery_plan', label:'No Delivery Plan', color:'red', count:_visible.filter(d=>!(d.plans&&d.plans.length)).length,
      test:d=>!(d.plans&&d.plans.length)},
   ];

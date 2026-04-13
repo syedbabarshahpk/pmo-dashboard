@@ -1547,13 +1547,11 @@ function renderHealth(){
   const active=allWI.filter(w=>!isDone(w.fields));
   const tot=active.length||1;
 
-  // ── Basic checks (all items) ──
   const noAssignee=active.filter(w=>!getAssignee(w.fields));
   const noReporter=active.filter(w=>!w.fields['System.CreatedBy']);
   const noSprint=active.filter(w=>!getIterShort(w.fields));
   const notUpdated=active.filter(w=>daysSince(w.fields['System.ChangedDate'])>7);
 
-  // ── Policy-gated checks ──
   const policyActive=active.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY);
   const policyStories=policyActive.filter(w=>isStory(w.fields));
   const policyTasks=policyActive.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
@@ -1564,79 +1562,38 @@ function renderHealth(){
 
   const storyPtsPct=policyStories.length>0?Math.round((policyStories.length-storiesNoPoints.length)/policyStories.length*100):100;
   const taskEstPct=policyTasks.length>0?Math.round((policyTasks.length-tasksNoHours.length)/policyTasks.length*100):100;
-  const acPct=storiesNoAC.length>0&&policyStories.length>0?Math.round((policyStories.length-storiesNoAC.length)/policyStories.length*100):100;
+  const acPct=policyStories.length>0?Math.round((policyStories.length-storiesNoAC.length)/policyStories.length*100):100;
   const suffix=' (post Mar\u00a010)';
 
   const checks=[
-    {
-      l:'Assignee set',
-      p:Math.round((active.length-noAssignee.length)/tot*100),
-      items:noAssignee,
-      fix:'Filter by Unassigned in ADO Backlog and assign each item.',
-      emptyMsg:'All active items have an assignee.'
-    },
-    {
-      l:'Has reporter',
-      p:Math.round((active.length-noReporter.length)/tot*100),
-      items:noReporter,
-      fix:'Ensure items are created while logged in to ADO with the correct user.',
-      emptyMsg:'All active items have a reporter.'
-    },
-    {
-      l:'In a sprint',
-      p:Math.round((active.length-noSprint.length)/tot*100),
-      items:noSprint,
-      fix:'Drag unassigned backlog items into upcoming sprints during planning.',
-      emptyMsg:'All active items are assigned to a sprint.'
-    },
-    {
-      l:'Updated this week',
-      p:Math.round((active.length-notUpdated.length)/tot*100),
-      items:notUpdated,
-      fix:'Enforce daily ADO updates in standup. Every active item needs a state change or comment.',
-      emptyMsg:'All active items have been updated this week.'
-    },
-    {
-      l:'User Stories have story points'+suffix,
-      p:storyPtsPct,
-      items:storiesNoPoints,
-      fix:'Estimate any User Stories missing story points before the next sprint planning.',
-      emptyMsg:'All post-Mar 10 User Stories have story points.'
-    },
-    {
-      l:'Tasks have estimated hours'+suffix,
-      p:taskEstPct,
-      items:tasksNoHours,
-      fix:'Open each Task in ADO and set Original Estimate in hours.',
-      emptyMsg:'All post-Mar 10 Tasks have estimated hours.'
-    },
-    {
-      l:'User Stories have acceptance criteria'+suffix,
-      p:acPct,
-      items:storiesNoAC,
-      fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.',
-      emptyMsg:'All post-Mar 10 User Stories have acceptance criteria.'
-    },
+    {l:'Assignee set',p:Math.round((active.length-noAssignee.length)/tot*100),items:noAssignee,fix:'Filter by Unassigned in ADO Backlog and assign each item.',empty:'All active items have an assignee.'},
+    {l:'Has reporter',p:Math.round((active.length-noReporter.length)/tot*100),items:noReporter,fix:'Ensure items are created while logged in to ADO.',empty:'All active items have a reporter.'},
+    {l:'In a sprint',p:Math.round((active.length-noSprint.length)/tot*100),items:noSprint,fix:'Drag backlog items into upcoming sprints during planning.',empty:'All active items are in a sprint.'},
+    {l:'Updated this week',p:Math.round((active.length-notUpdated.length)/tot*100),items:notUpdated,fix:'Enforce daily ADO updates. Every active item needs a state change or comment.',empty:'All active items updated this week.'},
+    {l:'User Stories have story points'+suffix,p:storyPtsPct,items:storiesNoPoints,fix:'Estimate any User Stories missing story points before sprint planning.',empty:'All post-Mar 10 User Stories have story points.'},
+    {l:'Tasks have estimated hours'+suffix,p:taskEstPct,items:tasksNoHours,fix:'Open each Task in ADO and set Original Estimate in hours.',empty:'All post-Mar 10 Tasks have estimated hours.'},
+    {l:'User Stories have acceptance criteria'+suffix,p:acPct,items:storiesNoAC,fix:'Add "Given / When / Then" criteria to every user story before it enters a sprint.',empty:'All post-Mar 10 User Stories have acceptance criteria.'},
   ];
 
-  $('health-list').innerHTML=checks.map(ch=>{
-    const col=ch.p>=80?'var(--green)':ch.p>=60?'var(--amber)':'var(--red)';
-    const needsWork=ch.p<100;
-    const itemCount=ch.items?ch.items.length:0;
-    return`<div class="health-row">
-      <div class="health-top">
-        <span class="hl">${ch.l}</span>
-        <div class="ht"><div class="hf" style="width:${ch.p}%;background:${col}"></div></div>
-        <span class="hp" style="color:${col}">${ch.p}%</span>
-        ${needsWork&&itemCount>0?`<button onclick="showItemList('${esc(ch.l)} \u2014 Items to fix',window._healthItems&&window._healthItems['${ch.l}'],${JSON.stringify(ch.emptyMsg)})" style="font-family:var(--font);font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid ${col};background:transparent;color:${col};cursor:pointer;white-space:nowrap;margin-left:4px">${itemCount} to fix \u2192</button>`:''}
-      </div>
-      ${ch.p<100?`<div class="health-tip"><div class="health-tip-label">How to improve</div>${esc(ch.fix)}</div>`:''}
-    </div>`;
-  }).join('');
+  // Store items by index so onclick can reference them safely
+  window._healthItems=checks.map(ch=>ch.items);
 
-  // Store items for the modal (can't serialize functions in onclick)
-  window._healthItems={};
-  checks.forEach(ch=>{ if(ch.items) window._healthItems[ch.l]=ch.items; });
+  $('health-list').innerHTML=checks.map((ch,idx)=>{
+    const col=ch.p>=80?'var(--green)':ch.p>=60?'var(--amber)':'var(--red)';
+    const itemCount=ch.items?ch.items.length:0;
+    return'<div class="health-row">'
+      +'<div class="health-top">'
+      +'<span class="hl">'+ch.l+'</span>'
+      +'<div class="ht"><div class="hf" style="width:'+ch.p+'%;background:'+col+'"></div></div>'
+      +'<span class="hp" style="color:'+col+'">'+ch.p+'%</span>'
+      +(itemCount>0?'<button onclick="showItemList(\''+ch.l.replace(/'/g,"\\'").replace(/\u00a0/g,' ')
+        +' \u2014 to fix\',window._healthItems['+idx+'],\''+ch.empty.replace(/'/g,"\\'")+'\''
+        +')" style="font-family:var(--font);font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid '+col
+        +';background:transparent;color:'+col+';cursor:pointer;white-space:nowrap;margin-left:4px">'+itemCount+' to fix \u2192</button>':'')
+      +'</div>'
+      +(ch.p<100?'<div class="health-tip"><div class="health-tip-label">How to improve</div>'+ch.fix+'</div>':'')
+      +'</div>';
+  }).join('');
 }
 
 function renderWITable(items){
@@ -1733,9 +1690,7 @@ function clearFilters(){
 
 function renderSummary(){
   const delayedItems=getDelayed();
-  const delayed=delayedItems.length;
   const unassignedItems=allWI.filter(w=>!getAssignee(w.fields)&&!isDone(w.fields));
-  const unassigned=unassignedItems.length;
   const done=allWI.filter(w=>isDone(w.fields)).length;
   const total=allWI.length||1;
   const pct=Math.round(done/total*100);
@@ -1755,18 +1710,18 @@ function renderSummary(){
   const itemsWithComments=allWI.filter(w=>!isDone(w.fields)&&(w.fields['System.CommentCount']||0)>0);
   const withComments=itemsWithComments.length;
 
-  // Store all item lists for click handlers
+  // Store all item lists — accessed by key from onclick handlers
   window._summaryItems={
-    delayed: delayedItems,
-    unassigned: unassignedItems,
-    comments: itemsWithComments,
-    noAC: storiesNoAC,
-    notUpdated: notUpdatedItems,
+    delayed:delayedItems,
+    unassigned:unassignedItems,
+    comments:itemsWithComments,
+    noAC:storiesNoAC,
+    notUpdated:notUpdatedItems,
   };
 
   let score=100;
-  if(delayed>0)score-=Math.min(20,delayed*2);
-  if(unassigned>0)score-=Math.min(10,unassigned);
+  if(delayedItems.length>0)score-=Math.min(20,delayedItems.length*2);
+  if(unassignedItems.length>0)score-=Math.min(10,unassignedItems.length);
   if(acPct<50)score-=20;else if(acPct<75)score-=10;
   if(updateRate<50)score-=15;else if(updateRate<70)score-=8;
   score=Math.max(0,Math.min(100,score));
@@ -1776,74 +1731,77 @@ function renderSummary(){
   $('sum-score').textContent=score;
   $('sum-score-label').textContent='Health score \u2014 '+(score>=70?'Good':score>=50?'Needs attention':'Critical');
 
-  // Helper to build a clickable stat tag
-  function statTag(label, color, itemKey, emptyMsg){
-    const items=window._summaryItems[itemKey]||[];
-    const clickable=items.length>0;
-    return '<span class="sum-tag '+(color||'')+(clickable?' sum-tag-click':'')+'"'
-      +(clickable?' onclick="showItemList(\''+esc(label)+'\',window._summaryItems[\''+itemKey+'\'],\''+emptyMsg+'\')" title="Click to see items" style="cursor:pointer"':'')
-      +'>'+label+'</span>';
+  // Build a tag — clickable if it has items
+  function tag(label,cls,key){
+    const items=key&&window._summaryItems[key]||[];
+    if(items.length>0)
+      return '<span class="sum-tag '+cls+' sum-tag-click" onclick="showSummaryItems(\''+key+'\')" style="cursor:pointer" title="Click to see items">'+label+'</span>';
+    return '<span class="sum-tag '+cls+'">'+label+'</span>';
   }
 
   const lines=[
     {icon:'red',path:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',cat:'Sprint delivery',catCls:'red',
-     text:delayed>0?delayed+' items are past their sprint end date.':'Sprint delivery is on track.',
-     tags:delayed>0
-       ?[statTag(delayed+' delayed','urgent','delayed','No delayed items.')]
-       :[statTag('On track','good','','')]},
+     text:delayedItems.length>0?delayedItems.length+' items are past their sprint end date.':'Sprint delivery is on track.',
+     tags:delayedItems.length>0?tag(delayedItems.length+' delayed','urgent','delayed'):tag('On track','good','')},
     {icon:'blue',path:'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',cat:'Clarity',catCls:'blue',
      text:withComments>0?withComments+' active items have open comment threads.':'No outstanding comment threads.',
-     tags:withComments>0
-       ?[statTag(withComments+' with comments','warn','comments','All comments addressed.')]
-       :[statTag('Clear','good','','')]},
+     tags:withComments>0?tag(withComments+' with comments','warn','comments'):tag('Clear','good','')},
     {icon:'amber',path:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',cat:'Story quality',catCls:acPct<50?'red':'amber',
      text:acPct<75?'Only '+acPct+'% of user stories have acceptance criteria (post Mar 10).':'Story quality is acceptable.',
-     tags:acPct<75
-       ?[statTag(storiesNoAC.length+' missing AC','urgent','noAC','All stories have acceptance criteria.'),statTag(acPct+'% quality','warn','','')]
-       :[statTag(acPct+'% quality','good','','')]},
+     tags:(acPct<75?tag(storiesNoAC.length+' missing AC','urgent','noAC')+' ':'')+tag(acPct+'% quality',acPct<50?'urgent':'warn','')},
     {icon:topC>botC*3?'amber':'green',path:'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z',cat:'Resource balance',catCls:topC>botC*3?'amber':'green',
      text:topP&&topC>botC*3?topP+' has '+topC+' items vs '+botP+"'s "+botC+'. Consider rebalancing.':'Workload is fairly distributed.',
-     tags:[statTag(ws.length+' contributors','blue','','')]},
+     tags:tag(ws.length+' contributors','blue','')},
     {icon:'green',path:'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',cat:'ADO compliance',catCls:updateRate<70?'red':'green',
      text:''+updateRate+'% of active items updated in the last 7 days.',
-     tags:updateRate<100
-       ?[statTag(notUpdatedItems.length+' not updated','warn','notUpdated','All items up to date.'),statTag(updateRate+'% compliance',updateRate<70?'urgent':'warn','','')]
-       :[statTag('100% up to date','good','','')]},
+     tags:tag(notUpdatedItems.length+' not updated','warn','notUpdated')+' '+tag(updateRate+'% compliance',updateRate<70?'urgent':'warn','')},
     {icon:'teal',path:'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z',cat:'Project velocity',catCls:'teal',
      text:pct+'% of total work items completed across all sprints.',
-     tags:[statTag(done+' done','good','',''),statTag((total-done)+' remaining','blue','','')]},
+     tags:tag(done+' done','good','')+' '+tag((total-done)+' remaining','blue','')},
   ];
 
-  $('sum-lines').innerHTML=lines.map(l=>`
-    <div class="sum-line">
-      <div class="sum-line-left">
-        <div class="sum-icon ${l.icon}"><svg viewBox="0 0 24 24"><path d="${l.path}"/></svg></div>
-        <div>
-          <div class="sum-line-cat ${l.catCls}">${l.cat}</div>
-          <div class="sum-line-text">${l.text}</div>
-          <div class="sum-tags">${Array.isArray(l.tags)?l.tags.join(''):l.tags}</div>
-        </div>
-      </div>
-    </div>`).join('');
+  $('sum-lines').innerHTML=lines.map(l=>'<div class="sum-line"><div class="sum-line-left">'
+    +'<div class="sum-icon '+l.icon+'"><svg viewBox="0 0 24 24"><path d="'+l.path+'"/></svg></div>'
+    +'<div><div class="sum-line-cat '+l.catCls+'">'+l.cat+'</div>'
+    +'<div class="sum-line-text">'+l.text+'</div>'
+    +'<div class="sum-tags">'+l.tags+'</div>'
+    +'</div></div></div>').join('');
 
   const advice=[];
-  if(acPct<75)advice.push({t:'Add acceptance criteria to the '+(stories.length-withAC.length)+' stories currently missing it.',i:'high',key:'noAC',label:'Show stories missing AC'});
-  if(delayed>0)advice.push({t:'Triage the '+delayed+' delayed items: complete, move, or cancel.',i:'med',key:'delayed',label:'Show delayed items'});
-  if(updateRate<70)advice.push({t:'Enforce daily ADO updates in standup. Target: 90%+.',i:'proc',key:'notUpdated',label:'Show stale items'});
-  if(unassigned>0)advice.push({t:'Assign the '+unassigned+' unowned items immediately.',i:'med',key:'unassigned',label:'Show unassigned items'});
-  if(!advice.length)advice.push({t:'Project is in good health. Maintain backlog hygiene.',i:'good',key:'',label:''});
+  if(acPct<75)advice.push({t:'Add acceptance criteria to the '+storiesNoAC.length+' stories currently missing it.',i:'high',key:'noAC'});
+  if(delayedItems.length>0)advice.push({t:'Triage the '+delayedItems.length+' delayed items: complete, move, or cancel.',i:'med',key:'delayed'});
+  if(updateRate<70)advice.push({t:'Enforce daily ADO updates in standup. Target: 90%+.',i:'proc',key:'notUpdated'});
+  if(unassignedItems.length>0)advice.push({t:'Assign the '+unassignedItems.length+' unowned items immediately.',i:'med',key:'unassigned'});
+  if(!advice.length)advice.push({t:'Project is in good health. Maintain backlog hygiene.',i:'good',key:''});
 
-  $('advice-items').innerHTML=advice.map((a,i)=>{
+  $('advice-items').innerHTML=advice.map(function(a,i){
     const hasItems=a.key&&(window._summaryItems[a.key]||[]).length>0;
-    return`<div class="advice-item">
-      <div class="advice-num">${i+1}</div>
-      <div class="advice-text">
-        ${esc(a.t)}
-        <span class="advice-impact ${a.i}">${a.i==='high'?'High impact':a.i==='med'?'Medium':a.i==='proc'?'Process fix':'Keep up'}</span>
-        ${hasItems?'<button onclick="showItemList(\''+esc(a.label)+'\',window._summaryItems[\''+a.key+'\'],\'\')" style="margin-left:8px;font-family:var(--font);font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer">View items \u2192</button>':''}
-      </div>
-    </div>`;
+    return '<div class="advice-item">'
+      +'<div class="advice-num">'+(i+1)+'</div>'
+      +'<div class="advice-text">'+esc(a.t)
+      +'<span class="advice-impact '+a.i+'">'+(a.i==='high'?'High impact':a.i==='med'?'Medium':a.i==='proc'?'Process fix':'Keep up')+'</span>'
+      +(hasItems?' <button onclick="showSummaryItems(\''+a.key+'\')" style="font-family:var(--font);font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer">View items \u2192</button>':'')
+      +'</div></div>';
   }).join('');
+}
+
+// Safe helper — called from onclick, looks up items by key
+function showSummaryItems(key){
+  const labels={
+    delayed:'Delayed Items',
+    unassigned:'Unassigned Items',
+    comments:'Items with Open Comments',
+    noAC:'User Stories Missing Acceptance Criteria',
+    notUpdated:'Items Not Updated in 7+ Days',
+  };
+  const empty={
+    delayed:'No delayed items.',
+    unassigned:'All items are assigned.',
+    comments:'No open comment threads.',
+    noAC:'All user stories have acceptance criteria.',
+    notUpdated:'All items updated recently.',
+  };
+  showItemList(labels[key]||key, window._summaryItems&&window._summaryItems[key]||[], empty[key]||'');
 }
 
 function showScoreModal(){
@@ -2063,22 +2021,29 @@ function masterStats(d){
 }
 
 function getDeliveryPlanBadge(d){
-  const plans=d.plans||[];const projName=d.proj.name;
-  const createUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
+  const plans=d.plans||[];
+  const projName=d.proj.name;
+  const plansPageUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans';
+
   if(!plans.length){
     return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#FCEBEB;border-radius:6px;margin-bottom:8px">'
-      +'<span style="font-size:10px;font-weight:600;color:#A32D2D">DELIVERY PLAN: NOT CREATED</span>'
+      +'<span style="font-size:10px;font-weight:600;color:#A32D2D">\u26a0 No delivery plan</span>'
       +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#A32D2D;color:#fff;border:none;cursor:pointer;font-family:inherit"'
-      +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+createUrl+'">Create &#8599;</button>'
+      +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+plansPageUrl+'">Create \u2197</button>'
       +'</div>';
   }
-  const plan=plans[0];
-  const planUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+plan.id;
-  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px">'
-    +'<span style="font-size:10px;font-weight:600;color:#3B6D11">&#10003; DELIVERY PLAN</span>'
-    +'<span style="font-size:10px;color:#3B6D11;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(plan.name)+'</span>'
-    +'<button style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px;background:#0D6E6E;color:#fff;border:none;cursor:pointer;font-family:inherit"'
-    +' onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+planUrl+'">Open &#8599;</button>'
+
+  // Show all plans as chips
+  const chips=plans.map(function(p){
+    const planUrl=ORG+'/'+encodeURIComponent(projName)+'/_boards/plans/'+p.id;
+    return '<button onclick="event.stopPropagation();window.open(this.dataset.url,\'_blank\')" data-url="'+planUrl+'"'
+      +' style="font-size:10px;padding:2px 10px;border-radius:20px;background:var(--teal);color:#fff;border:none;cursor:pointer;font-family:inherit;white-space:nowrap">'
+      +esc(p.name)+' \u2197</button>';
+  }).join(' ');
+
+  return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#EAF3DE;border-radius:6px;margin-bottom:8px;flex-wrap:wrap">'
+    +'<span style="font-size:10px;font-weight:600;color:#3B6D11">\u2713 '+(plans.length>1?plans.length+' delivery plans':'Delivery plan')+'</span>'
+    +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-left:auto">'+chips+'</div>'
     +'</div>';
 }
 

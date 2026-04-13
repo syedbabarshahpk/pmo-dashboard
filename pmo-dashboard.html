@@ -289,13 +289,13 @@ table.wi tr:hover td{background:#fafaf8;cursor:pointer;}
 .sum-line:last-of-type{border-bottom:none;}
 .sum-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
 .sum-icon svg{width:15px;height:15px;fill:#fff;}
-.sum-icon.red{background:rgba(226,75,74,.3);}.sum-icon.amber{background:rgba(239,159,39,.25);}.sum-icon.green{background:rgba(99,153,34,.25);}.sum-icon.blue{background:rgba(24,95,165,.25);}
+.sum-icon.red{background:rgba(226,75,74,.3);}.sum-icon.amber{background:rgba(239,159,39,.25);}.sum-icon.green{background:rgba(99,153,34,.25);}.sum-icon.blue{background:rgba(24,95,165,.25);}.sum-icon.teal{background:rgba(13,110,110,.35);}
 .sum-body{flex:1;}
 .sum-cat{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
 .sum-cat.red{color:rgba(240,149,149,1);}.sum-cat.amber{color:rgba(250,199,117,1);}.sum-cat.green{color:rgba(157,225,203,1);}.sum-cat.blue{color:rgba(181,212,244,1);}
 .sum-text{font-size:12px;color:rgba(255,255,255,.8);line-height:1.65;}
-.sum-tags{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto;min-width:120px;justify-content:flex-end;}
-.sum-tag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);white-space:nowrap;}
+.sum-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.sum-tag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);white-space:nowrap;transition:opacity .15s;}.sum-tag-click:hover{opacity:.75;}
 .sum-tag.urgent{background:rgba(226,75,74,.25);color:#F7C1C1;}
 .sum-tag.warn{background:rgba(239,159,39,.2);color:#FAC775;}
 .sum-tag.good{background:rgba(99,153,34,.2);color:#C0DD97;}
@@ -1760,12 +1760,12 @@ function renderSummary(){
      tags:tag(done+' done','good','')+' '+tag((total-done)+' remaining','blue','')},
   ];
 
-  $('sum-lines').innerHTML=lines.map(l=>'<div class="sum-line"><div class="sum-line-left">'
+  $('sum-lines').innerHTML=lines.map(l=>'<div class="sum-line">'
     +'<div class="sum-icon '+l.icon+'"><svg viewBox="0 0 24 24"><path d="'+l.path+'"/></svg></div>'
-    +'<div><div class="sum-line-cat '+l.catCls+'">'+l.cat+'</div>'
-    +'<div class="sum-line-text">'+l.text+'</div>'
+    +'<div class="sum-body"><div class="sum-cat '+l.catCls+'">'+l.cat+'</div>'
+    +'<div class="sum-text">'+l.text+'</div>'
     +'<div class="sum-tags">'+l.tags+'</div>'
-    +'</div></div></div>').join('');
+    +'</div></div>').join('');
 
   const advice=[];
   if(acPct<75)advice.push({t:'Add acceptance criteria to the '+storiesNoAC.length+' stories currently missing it.',i:'high',key:'noAC'});

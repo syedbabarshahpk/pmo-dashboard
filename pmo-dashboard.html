@@ -919,12 +919,42 @@ function renderAll(){
 }
 
 function getDelayed(){
+  const POLICY=new Date('2026-03-10');
   const now=new Date();
+  const TODO_STATES=['New','To Do','To-Do','Backlog','Ready','Not Started'];
+  const DONE_STATES=['Done','Completed','Closed','Resolved','Removed'];
+
   return allWI.filter(w=>{
-    if(isDone(w.fields))return false;
-    const iter=allIterations.find(it=>it.name===getIterShort(w.fields));
-    if(!iter?.attributes?.finishDate)return false;
-    return new Date(iter.attributes.finishDate)<now;
+    const f=w.fields;
+    const wt=f['System.WorkItemType']||'';
+    const state=f['System.State']||'';
+    const created=new Date(f['System.CreatedDate']||0);
+
+    // Policy date gate
+    if(created<POLICY)return false;
+
+    // Must be "in flight" — past To-Do but not yet Done
+    if(TODO_STATES.includes(state))return false;  // still in backlog
+    if(DONE_STATES.includes(state))return false;  // already done
+
+    // Get estimate — 1 story point = 1 hour
+    const isTask=wt==='Task';
+    let estimateHours=0;
+    if(isTask){
+      estimateHours=getTaskHours(f); // OriginalEstimate in hours
+    } else {
+      estimateHours=getEstimate(f);  // StoryPoints/Effort/Size — 1pt = 1hr
+    }
+
+    // No estimate = can't determine if delayed
+    if(estimateHours<=0)return false;
+
+    // Time elapsed since item moved to in-flight state (StateChangeDate)
+    const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+    if(!stateChangedStr)return false;
+    const hoursElapsed=(now-new Date(stateChangedStr))/3600000;
+
+    return hoursElapsed>estimateHours;
   });
 }
 function getSprintItems(name){return allWI.filter(w=>getIterShort(w.fields)===name);}
@@ -1201,55 +1231,36 @@ function renderTaskCards(taskItems,sprintStart){
 function renderDelayed(){
   const POLICY=new Date('2026-03-10');
   const now=new Date();
-  const HOURS_PER_POINT=8; // 1 story point = 1 working day = 8 hours
+  const TODO_STATES=['New','To Do','To-Do','Backlog','Ready','Not Started'];
+  const DONE_STATES=['Done','Completed','Closed','Resolved','Removed'];
 
   const delayed=allWI.filter(w=>{
     const f=w.fields;
-    const t=f['System.WorkItemType']||'';
+    const wt=f['System.WorkItemType']||'';
+    const state=f['System.State']||'';
     const created=new Date(f['System.CreatedDate']||0);
     if(created<POLICY)return false;
-    if(isDone(f))return false;
-    if(!isActive(f))return false; // only check items currently In Progress
-
-    // Get when it moved to In Progress (StateChangeDate is set when state changes)
+    if(TODO_STATES.includes(state))return false;
+    if(DONE_STATES.includes(state))return false;
+    const isTask=wt==='Task';
+    const estimateHours=isTask?getTaskHours(f):getEstimate(f);
+    if(estimateHours<=0)return false;
     const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
     if(!stateChangedStr)return false;
-    const inProgressSince=new Date(stateChangedStr);
-    const hoursElapsed=(now-inProgressSince)/3600000;
-
-    if(t==='Task'){
-      const orig=getTaskHours(f);
-      if(orig<=0)return false;
-      return hoursElapsed>orig;
-    }
-    if(t==='User Story'||t==='Product Backlog Item'||t==='Requirement'){
-      const pts=getEstimate(f);
-      if(pts<=0)return false;
-      return hoursElapsed>(pts*HOURS_PER_POINT);
-    }
-
-    return false;
+    const hoursElapsed=(now-new Date(stateChangedStr))/3600000;
+    return hoursElapsed>estimateHours;
   });
 
   // Sort by most overdue first
   delayed.sort((a,b)=>{
-    const getOverdueHours=w=>{
+    const over=w=>{
       const f=w.fields;
-      const t=f['System.WorkItemType']||'';
-      const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
-      const inProgressSince=new Date(stateChangedStr);
-      const hoursElapsed=(now-inProgressSince)/3600000;
-      if(t==='Task'){
-        const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
-        return hoursElapsed-orig;
-      }
-      if(t==='User Story'){
-        const pts=parseFloat(f['Microsoft.VSTS.Scheduling.StoryPoints'])||0;
-        return hoursElapsed-(pts*HOURS_PER_POINT);
-      }
-      return 0;
+      const wt=f['System.WorkItemType']||'';
+      const est=wt==='Task'?getTaskHours(f):getEstimate(f);
+      const sc=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+      return sc?(now-new Date(sc))/3600000-est:0;
     };
-    return getOverdueHours(b)-getOverdueHours(a);
+    return over(b)-over(a);
   });
 
   const countEl=$('delayed-count-new');
@@ -1262,50 +1273,36 @@ function renderDelayed(){
     listEl.innerHTML='<div class="empty" style="padding:1.25rem;text-align:center">'
       +'<div style="font-size:22px;margin-bottom:6px">\u2713</div>'
       +'<div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px">No delayed items</div>'
-      +'<div style="font-size:11px;color:var(--text-3)">Good job! All active items are within their estimated time.</div>'
+      +'<div style="font-size:11px;color:var(--text-3)">All in-flight items are within their estimated time.</div>'
       +'</div>';
     return;
   }
 
   listEl.innerHTML=delayed.slice(0,20).map(w=>{
     const f=w.fields;
-    const t=f['System.WorkItemType']||'';
+    const wt=f['System.WorkItemType']||'';
+    const isTask=wt==='Task';
+    const state=f['System.State']||'';
     const assignee=getAssignee(f)||'Unassigned';
+    const estimateHours=isTask?getTaskHours(f):getEstimate(f);
     const stateChangedStr=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
-    const inProgressSince=new Date(stateChangedStr);
-    const hoursElapsed=Math.round((now-inProgressSince)/3600000);
+    const hoursElapsed=stateChangedStr?Math.round((now-new Date(stateChangedStr))/3600000):0;
+    const overdueHours=Math.round(hoursElapsed-estimateHours);
+    const overdueDays=Math.floor(overdueHours/24);
+    const overdueLabel=overdueDays>=1?overdueDays+'d '+(overdueHours%24>0?overdueHours%24+'h':'')+'overdue':overdueHours+'h overdue';
+    const estimateLabel=isTask?estimateHours+'h estimated':estimateHours+'pt ('+(estimateHours)+'h @ 1pt=1h)';
 
-    let estimatedHours=0;
-    let overdueHours=0;
-    let estimateLabel='';
-
-    if(t==='Task'){
-      const orig=parseFloat(f['Microsoft.VSTS.Scheduling.OriginalEstimate'])||0;
-      estimatedHours=orig;
-      overdueHours=Math.round(hoursElapsed-orig);
-      estimateLabel=orig+'h estimated';
-    } else if(t==='User Story'){
-      const pts=parseFloat(f['Microsoft.VSTS.Scheduling.StoryPoints'])||0;
-      estimatedHours=pts*HOURS_PER_POINT;
-      overdueHours=Math.round(hoursElapsed-estimatedHours);
-      estimateLabel=pts+' pts \u00d7 8h = '+estimatedHours+'h estimated';
-    }
-
-    const overdueDays=Math.floor(overdueHours/8); // working days
-    const overdueLabel=overdueDays>0
-      ? overdueDays+'d '+( overdueHours%8>0 ? (overdueHours%8)+'h' : '')+' overdue'
-      : overdueHours+'h overdue';
-
-    return`<div class="linked-row" onclick="openAdo(${w.id})" style="flex-wrap:wrap;gap:6px;padding:10px 6px;align-items:center">
-      <span class="wi-id">#${w.id}</span>
-      <span class="tp ${tcls(t)}">${esc(t)}</span>
-      <span class="wi-title" style="flex:1;min-width:140px;font-weight:500">${esc((f['System.Title']||'').slice(0,55))}</span>
-      <span class="badge red">${esc(overdueLabel)}</span>
-      <span class="badge gray" title="Time in progress vs estimate">${hoursElapsed}h elapsed / ${estimatedHours}h est</span>
-      <span style="font-size:10px;color:var(--text-3);white-space:nowrap">${esc(estimateLabel)}</span>
-      <span class="wi-person" style="font-size:11px;color:var(--text-2);white-space:nowrap">${esc(assignee)}</span>
-      <button class="ado-btn" style="opacity:1" onclick="openAdo(${w.id},event)">&#8599;</button>
-    </div>`;
+    return'<div class="linked-row" onclick="openAdo('+w.id+')" style="flex-wrap:wrap;gap:6px;padding:10px 6px;align-items:center">'
+      +'<span class="wi-id">#'+w.id+'</span>'
+      +'<span class="tp '+tcls(wt)+'">'+esc(wt)+'</span>'
+      +'<span class="sp '+scls(state)+'">'+esc(state)+'</span>'
+      +'<span class="wi-title" style="flex:1;min-width:140px;font-weight:500">'+esc((f['System.Title']||'').slice(0,55))+'</span>'
+      +'<span class="badge red">'+esc(overdueLabel)+'</span>'
+      +'<span class="badge gray" title="Time in state vs estimate">'+hoursElapsed+'h elapsed / '+estimateHours+'h est</span>'
+      +'<span style="font-size:10px;color:var(--text-3);white-space:nowrap">'+esc(estimateLabel)+'</span>'
+      +'<span class="wi-person" style="font-size:11px;color:var(--text-2);white-space:nowrap">'+esc(assignee)+'</span>'
+      +'<button class="ado-btn" style="opacity:1" onclick="openAdo('+w.id+',event)">&#8599;</button>'
+      +'</div>';
   }).join('')+(delayed.length>20?'<div style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:right">+'+(delayed.length-20)+' more</div>':'');
 }
 

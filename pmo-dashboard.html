@@ -1795,11 +1795,32 @@ function renderSummary(){
     notUpdated:notUpdatedItems,
   };
 
+  // ── Score — identical formula to masterStats so both show the same number ──
+  const POLICY_S=new Date('2026-03-10');
+  const policyWI=allWI.filter(w=>new Date(w.fields['System.CreatedDate']||0)>=POLICY_S);
+  const policyUS=policyWI.filter(w=>isStory(w.fields));
+  const policyTasks=policyWI.filter(w=>(w.fields['System.WorkItemType']||'')==='Task');
+  const unestimatedCount=policyUS.filter(w=>!hasAnyEstimate(w.fields)).length
+    +policyTasks.filter(w=>!hasAnyEstimate(w.fields)).length;
+  const policyEstimatable=policyUS.length+policyTasks.length;
+  const unestPct_s=policyEstimatable>0?Math.round(unestimatedCount/policyEstimatable*100):0;
+  // Scope creep: items added to a sprint after it started
+  let scopeCreep_s=0;
+  const now_s=new Date();
+  allIterations.forEach(it=>{
+    const s=it.attributes&&it.attributes.startDate?new Date(it.attributes.startDate):null;
+    const e=it.attributes&&it.attributes.finishDate?new Date(it.attributes.finishDate):null;
+    if(!s||!e||now_s<s||now_s>e)return;
+    scopeCreep_s+=allWI.filter(w=>getIterShort(w.fields)===it.name
+      &&w.fields['System.CreatedDate']&&new Date(w.fields['System.CreatedDate'])>s).length;
+  });
   let score=100;
-  if(delayedItems.length>0)score-=Math.min(20,delayedItems.length*2);
-  if(unassignedItems.length>0)score-=Math.min(10,unassignedItems.length);
-  if(acPct<50)score-=20;else if(acPct<75)score-=10;
-  if(updateRate<50)score-=15;else if(updateRate<70)score-=8;
+  if(delayedItems.length>0){score-=Math.min(20,delayedItems.length*2);}
+  if(unassignedItems.length>0){score-=Math.min(10,unassignedItems.length);}
+  if(acPct<50){score-=20;}else if(acPct<75){score-=10;}
+  if(updateRate<50){score-=15;}else if(updateRate<70){score-=8;}
+  if(unestPct_s>30){score-=5;}
+  if(scopeCreep_s>3){score-=5;}
   score=Math.max(0,Math.min(100,score));
 
   $('sum-proj').textContent=currentProject;

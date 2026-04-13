@@ -2042,10 +2042,26 @@ function masterStats(d){
   const active=wi.filter(w=>isActive(w.fields));
   const notDone=wi.filter(w=>!isDone(w.fields));
 
+  // Use same delayed logic as getDelayed() — hours-based, 1pt=1hr
+  const _POLICY_D=new Date('2026-03-10');
+  const _TODO=['New','To Do','To-Do','Backlog','Ready','Not Started'];
+  const _DONE=['Done','Completed','Closed','Resolved','Removed'];
   const delayed=wi.filter(w=>{
-    if(isDone(w.fields))return false;
-    const it=iters.find(it=>it.name===getIterShort(w.fields));
-    return it&&it.attributes&&it.attributes.finishDate&&new Date(it.attributes.finishDate)<now;
+    const f=w.fields;
+    const wt=f['System.WorkItemType']||'';
+    const state=f['System.State']||'';
+    if(new Date(f['System.CreatedDate']||0)<_POLICY_D)return false;
+    if(_TODO.includes(state)||_DONE.includes(state))return false;
+    const isTask=wt==='Task';
+    const estHrs=isTask
+      ?(()=>{const oe=f['Microsoft.VSTS.Scheduling.OriginalEstimate'];return(oe!=null&&oe!=='')?Number(oe)||0:0;})()
+      :(()=>{const sp=f['Microsoft.VSTS.Scheduling.StoryPoints'];if(sp!=null&&sp!=='')return Number(sp)||0;
+             const ef=f['Microsoft.VSTS.Scheduling.Effort'];if(ef!=null&&ef!=='')return Number(ef)||0;
+             const sz=f['Microsoft.VSTS.Scheduling.Size'];if(sz!=null&&sz!=='')return Number(sz)||0;return 0;})();
+    if(estHrs<=0)return false;
+    const sc=f['Microsoft.VSTS.Common.StateChangeDate']||f['System.ChangedDate'];
+    if(!sc)return false;
+    return(now-new Date(sc))/3600000>estHrs;
   });
   const unassigned=notDone.filter(w=>!getAssignee(w.fields));
 

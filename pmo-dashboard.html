@@ -2169,6 +2169,10 @@ function renderMasterDashboard(){
      test:d=>d.s.scopeCreep>0},
     {key:'healthy',  label:'Healthy Projects',    color:'green',  count:_visible.filter(d=>d.s.score>=80).length,
      test:d=>d.s.score>=80},
+    {key:'no_sprint', label:'No Active Sprint',    color:'red',    count:_visible.filter(d=>!d.s.curIter).length,
+     test:d=>!d.s.curIter},
+    {key:'no_delivery_plan', label:'No Delivery Plan', color:'red', count:_visible.filter(d=>!(d.plans&&d.plans.length)).length,
+     test:d=>!(d.plans&&d.plans.length)},
   ];
 
   // ── Render filter pills ──
